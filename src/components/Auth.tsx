@@ -136,12 +136,7 @@ export default function Auth() {
               </form>
             )}
 
-            {/* Hint Box for demo accounts */}
-            <div className="bg-slate-50 border border-slate-150 rounded-lg p-3.5 mt-5 text-[11px] text-slate-600 leading-relaxed space-y-1">
-              <span className="font-bold text-slate-800 block">Acceso Rápido del Ecosistema Demo:</span>
-              <p>• <strong>Administrador:</strong> admin@vexapos.com / <code>123</code></p>
-              <p>• <strong>Cajero/Empleado:</strong> laura@vexapos.com / <code>123</code></p>
-            </div>
+
           </div>
     </>
   );

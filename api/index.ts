@@ -38,157 +38,26 @@ interface AppState {
   syncStatus: string;
 }
 
-// Default initial database content
 const DEFAULT_STATE: AppState = {
   users: [
-    { id: "1", name: "Administrador Vexa POS", email: "admin@vexapos.com", password: "123", role: "admin", profileImage: "" },
-    { id: "2", name: "Laura Valentina", email: "laura@vexapos.com", password: "123", role: "worker", profileImage: "" }
+    { id: "1", name: "Administrador Vexa POS", email: "admin@vexapos.com", password: "123", role: "admin", profileImage: "" }
   ],
   config: {
     business: {
       name: "Vexa POS",
-      nit: "901.405.321-4",
-      foundationYear: "2018",
-      phone: "+57 (311) 456-7890",
-      address: "Calle 134 # 58-20, Suba",
-      city: "Bogotá, Colombia"
+      nit: "",
+      foundationYear: "",
+      phone: "",
+      address: "",
+      city: ""
     }
   },
-  products: [
-    {
-      id: "prod-1",
-      name: "Dolex Forte Tabletas 500mg",
-      expirationDate: "2028-09-12",
-      laboratory: "GSK",
-      cost: 15000,
-      price: 24000,
-      priceUnits: 2500,
-      category: "Analgésicos",
-      quantityOnSkins: 15,
-      quantityUnits: 4,
-      conversionFactor: 12,
-      minStockAlert: 10,
-      barcode: "7702008123456",
-      fotoUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300",
-      isActive: true
-    },
-    {
-      id: "prod-2",
-      name: "Acetaminofén Genfar 500mg",
-      expirationDate: "2027-11-20",
-      laboratory: "Genfar",
-      cost: 4000,
-      price: 8000,
-      priceUnits: 500,
-      category: "Analgésicos",
-      quantityOnSkins: 40,
-      quantityUnits: 0,
-      conversionFactor: 20,
-      minStockAlert: 15,
-      barcode: "7702008777777",
-      fotoUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300",
-      isActive: true
-    },
-    {
-      id: "prod-3",
-      name: "Amoxicilina 500mg MK",
-      expirationDate: "2027-05-15",
-      laboratory: "MK",
-      cost: 12000,
-      price: 18000,
-      priceUnits: 800,
-      category: "Antibióticos",
-      quantityOnSkins: 8,
-      quantityUnits: 15,
-      conversionFactor: 30,
-      minStockAlert: 5,
-      barcode: "7702008654321",
-      fotoUrl: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=300",
-      isActive: true
-    },
-    {
-      id: "prod-4",
-      name: "Emulsión de Scott Naranja",
-      expirationDate: "2028-01-10",
-      laboratory: "GSK",
-      cost: 21000,
-      price: 29500,
-      category: "Vitaminas y Multivitamínicos",
-      quantityOnSkins: 25,
-      quantityUnits: 0,
-      conversionFactor: 1,
-      minStockAlert: 8,
-      barcode: "7702008999888",
-      fotoUrl: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=300",
-      isActive: true
-    },
-    {
-      id: "prod-5",
-      name: "Loratadina 10mg Tecnoquímicas",
-      expirationDate: "2027-04-18",
-      laboratory: "Tecnoquímicas",
-      cost: 3500,
-      price: 7000,
-      priceUnits: 900,
-      category: "Antihistamínicos",
-      quantityOnSkins: 50,
-      quantityUnits: 6,
-      conversionFactor: 10,
-      minStockAlert: 12,
-      barcode: "7702008222111",
-      fotoUrl: "",
-      isActive: true
-    }
-  ],
-  suppliers: [
-    { id: "sup-1", companyName: "Coaspharma S.A.S", nit: "800.231.543-9", phone: "601-5432100", whatsapp: "+573155555555" },
-    { id: "sup-2", companyName: "Droguerías Aliadas de Colombia", nit: "900.112.441-2", phone: "601-9876543", whatsapp: "+573212222222" },
-    { id: "sup-3", companyName: "Distribuidora Nacional de Fármacos", nit: "890.301.218-0", phone: "602-3334455", whatsapp: "+573204445555" }
-  ],
+  products: [],
+  suppliers: [],
   laboratories: ["Genfar", "MK", "Tecnoquímicas", "GSK", "Bayer", "Abbott", "Sanofi", "Roche"],
   categories: ["Analgésicos", "Antibióticos", "Antihistamínicos", "Vitaminas y Multivitamínicos", "Inyectables", "Cuidado Bebé", "Higiene y Salud Orgánica"],
-  sales: [
-    {
-      id: "sale-1",
-      invoiceNumber: "FC-00001",
-      dateTime: "2026-06-16T14:35:00-05:00",
-      sellerId: "2",
-      sellerName: "Laura Valentina",
-      items: [
-        { productId: "prod-1", productName: "Dolex Forte Tabletas 500mg", quantitySkins: 1, quantityUnits: 0, price: 24000, subtotal: 24000 },
-        { productId: "prod-5", productName: "Loratadina 10mg Tecnoquímicas", quantitySkins: 0, quantityUnits: 2, price: 700, subtotal: 1400 }
-      ],
-      total: 25400,
-      clientNit: "123456789"
-    },
-    {
-      id: "sale-2",
-      invoiceNumber: "FC-00002",
-      dateTime: "2026-06-17T09:20:00-05:00",
-      sellerId: "1",
-      sellerName: "Administrador Vexa POS",
-      items: [
-        { productId: "prod-3", productName: "Amoxicilina 500mg MK", quantitySkins: 0, quantityUnits: 10, price: 600, subtotal: 6000 }
-      ],
-      total: 6000
-    }
-  ],
-  closures: [
-    {
-      id: "close-2026-06-16",
-      date: "2026-06-16",
-      totalSalesCount: 1,
-      totalSalesRevenue: 25400,
-      totalExpenses: 5000,
-      initialCash: 100000,
-      finalCash: 120400,
-      expenses: [
-        { id: "exp-1", description: "Bolsas plásticas y empaques", amount: 5000, timestamp: "2026-06-16T16:00:00-05:00" }
-      ],
-      isClosed: true,
-      closedAt: "2026-06-16T21:00:00-05:00"
-    }
-  ],
+  sales: [],
+  closures: [],
   syncStatus: "synchronized"
 };
 

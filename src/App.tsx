@@ -47,17 +47,11 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   // Authentication & session variables
-  const [currentUser, setCurrentUser] = useState<any | null>({
-    id: "1",
-    name: "Administrador Vexa POS",
-    email: "admin@vexapos.com",
-    role: "admin",
-    profileImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-  });
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
   
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
-  const [loginEmail, setLoginEmail] = useState("admin@vexapos.com");
-  const [loginPassword, setLoginPassword] = useState("123");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
@@ -68,11 +62,11 @@ export default function App() {
   // Business Profile Info
   const [business, setBusiness] = useState<BusinessConfig>({
     name: "Vexa POS",
-    nit: "901.405.321-4",
-    foundationYear: "2018",
-    phone: "+57 (311) 456-7890",
-    address: "Calle 134 # 58-20, Suba",
-    city: "Bogotá, Colombia"
+    nit: "",
+    foundationYear: "",
+    phone: "",
+    address: "",
+    city: ""
   });
 
   // Master lists
@@ -88,8 +82,8 @@ export default function App() {
     totalSalesCount: 0,
     totalSalesRevenue: 0,
     totalExpenses: 0,
-    initialCash: 120000,
-    finalCash: 120000,
+    initialCash: 100000,
+    finalCash: 100000,
     expenses: [],
     isClosed: false
   });
@@ -325,13 +319,8 @@ export default function App() {
         setCurrentUser(fallbackAdmin);
         setProfileName(fallbackAdmin.name);
         setAuthSuccess("Ingreso offline exitoso.");
-      } else if (loginEmail === "laura@vexapos.com" && loginPassword === "123") {
-        const fallbackWorker = { id: "2", name: "Laura Valentina (Offline Fallback)", email: "laura@vexapos.com", role: "worker" as const };
-        setCurrentUser(fallbackWorker);
-        setProfileName(fallbackWorker.name);
-        setAuthSuccess("Ingreso offline exitoso.");
       } else {
-        setAuthError("No se pudo conectar al servidor y las credenciales de demo no coinciden (use admin@vexapos.com / 123)");
+        setAuthError("No se pudo conectar al servidor y las credenciales no coinciden.");
       }
     }
   };
@@ -1097,13 +1086,7 @@ export default function App() {
   }, 0);
 
   // Auto add preseeded code trigger list
-  const preseededBarcodes = [
-    { key: "prod-1", name: "Dolex Forte", code: "7702008123456" },
-    { key: "prod-2", name: "Acetaminofén Genfar", code: "7702008777777" },
-    { key: "prod-3", name: "Amoxicilina MK", code: "7702008654321" },
-    { key: "prod-4", name: "Emulsión Scott", code: "7702008999888" },
-    { key: "prod-5", name: "Loratadina", code: "7702008222111" },
-  ];
+  const preseededBarcodes: any[] = [];
 
   const restockSelectedProduct = products.find(p => p.id === restockProductId);
   const isRestockProductAmbasMode = restockSelectedProduct && restockSelectedProduct.conversionFactor > 1;
