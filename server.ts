@@ -2,6 +2,17 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
+import dotenv from "dotenv";
+import { MongoClient, Db } from "mongodb";
+import dns from "dns";
+
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch (e) {
+  console.warn("Could not set custom DNS servers, using system default:", e);
+}
+
+dotenv.config();
 
 const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), "db-store.json");
@@ -51,13 +62,13 @@ const DEFAULT_STATE: AppState = {
       name: "Dolex Forte Tabletas 500mg",
       expirationDate: "2028-09-12",
       laboratory: "GSK",
-      cost: 15000, // cost of box (12 sobres)
-      price: 24000, // retail price per box
+      cost: 15000,
+      price: 24000,
       priceUnits: 2500,
       category: "Analgésicos",
       quantityOnSkins: 15,
       quantityUnits: 4,
-      conversionFactor: 12, // 12 sobres per box, or 12 units per envelope
+      conversionFactor: 12,
       minStockAlert: 10,
       barcode: "7702008123456",
       fotoUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300",
@@ -68,7 +79,7 @@ const DEFAULT_STATE: AppState = {
       name: "Acetaminofén Genfar 500mg",
       expirationDate: "2027-11-20",
       laboratory: "Genfar",
-      cost: 4000, // cost per box (20 sobres)
+      cost: 4000,
       price: 8000,
       priceUnits: 500,
       category: "Analgésicos",
@@ -85,13 +96,13 @@ const DEFAULT_STATE: AppState = {
       name: "Amoxicilina 500mg MK",
       expirationDate: "2027-05-15",
       laboratory: "MK",
-      cost: 12000, // cost of 30 tablets
+      cost: 12000,
       price: 18000,
       priceUnits: 800,
       category: "Antibióticos",
       quantityOnSkins: 8,
       quantityUnits: 15,
-      conversionFactor: 30, // 30 units per box
+      conversionFactor: 30,
       minStockAlert: 5,
       barcode: "7702008654321",
       fotoUrl: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=300",
@@ -105,9 +116,9 @@ const DEFAULT_STATE: AppState = {
       cost: 21000,
       price: 29500,
       category: "Vitaminas y Multivitamínicos",
-      quantityOnSkins: 25, // For liquid it's individual units
+      quantityOnSkins: 25,
       quantityUnits: 0,
-      conversionFactor: 1, // Only sold by whole bottle (1 envelope/box equals 1 bottle)
+      conversionFactor: 1,
       minStockAlert: 8,
       barcode: "7702008999888",
       fotoUrl: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=300",
@@ -147,7 +158,7 @@ const DEFAULT_STATE: AppState = {
       sellerName: "Laura Valentina",
       items: [
         { productId: "prod-1", productName: "Dolex Forte Tabletas 500mg", quantitySkins: 1, quantityUnits: 0, price: 24000, subtotal: 24000 },
-        { productId: "prod-5", productName: "Loratadina 10mg Tecnoquímicas", quantitySkins: 0, quantityUnits: 2, price: 700, subtotal: 1400 } // Loratadina unit price is 7000 / 10 = 700
+        { productId: "prod-5", productName: "Loratadina 10mg Tecnoquímicas", quantitySkins: 0, quantityUnits: 2, price: 700, subtotal: 1400 }
       ],
       total: 25400,
       clientNit: "123456789"
@@ -159,7 +170,7 @@ const DEFAULT_STATE: AppState = {
       sellerId: "1",
       sellerName: "Administrador Vexa POS",
       items: [
-        { productId: "prod-3", productName: "Amoxicilina 500mg MK", quantitySkins: 0, quantityUnits: 10, price: 600, subtotal: 6000 } // unit price 18000 / 30 = 600
+        { productId: "prod-3", productName: "Amoxicilina 500mg MK", quantitySkins: 0, quantityUnits: 10, price: 600, subtotal: 6000 }
       ],
       total: 6000
     }
@@ -183,7 +194,7 @@ const DEFAULT_STATE: AppState = {
   syncStatus: "synchronized"
 };
 
-// Write store to disk
+// Write local store to disk
 function saveDb(state: AppState) {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(state, null, 2), "utf8");
@@ -192,7 +203,7 @@ function saveDb(state: AppState) {
   }
 }
 
-// Read store from disk
+// Read local store from disk
 function loadDb(): AppState {
   try {
     if (fs.existsSync(DB_FILE)) {
@@ -206,13 +217,297 @@ function loadDb(): AppState {
   return DEFAULT_STATE;
 }
 
+// MongoDB Connections state
+let mongoClient: MongoClient | null = null;
+let mongoDb: Db | null = null;
+
+const MONGODB_URI = process.env.MONGODB_URI;
+
+async function seedMongoDatabase() {
+  if (!mongoDb) return;
+
+  try {
+    const usersCount = await mongoDb.collection("users").countDocuments();
+    if (usersCount > 0) {
+      console.log("[Droguería Backend] MongoDB Atlas already has data. Migration skipped.");
+      return;
+    }
+
+    console.log("[Droguería Backend] MongoDB Atlas is empty. Migrating local JSON store...");
+    const localDb = loadDb();
+
+    if (localDb.users && localDb.users.length > 0) {
+      await mongoDb.collection("users").insertMany(localDb.users);
+    }
+
+    if (localDb.config && localDb.config.business) {
+      await mongoDb.collection("config").updateOne(
+        { _id: "business_config" as any },
+        { $set: localDb.config.business },
+        { upsert: true }
+      );
+    }
+
+    if (localDb.products && localDb.products.length > 0) {
+      await mongoDb.collection("products").insertMany(localDb.products);
+    }
+
+    if (localDb.suppliers && localDb.suppliers.length > 0) {
+      await mongoDb.collection("suppliers").insertMany(localDb.suppliers);
+    }
+
+    await mongoDb.collection("metadata").updateOne(
+      { _id: "lists" as any },
+      {
+        $set: {
+          laboratories: localDb.laboratories || DEFAULT_STATE.laboratories,
+          categories: localDb.categories || DEFAULT_STATE.categories
+        }
+      },
+      { upsert: true }
+    );
+
+    if (localDb.sales && localDb.sales.length > 0) {
+      await mongoDb.collection("sales").insertMany(localDb.sales);
+    }
+
+    if (localDb.closures && localDb.closures.length > 0) {
+      await mongoDb.collection("closures").insertMany(localDb.closures);
+    }
+
+    console.log("[Droguería Backend] Local data successfully migrated to MongoDB Atlas!");
+  } catch (err) {
+    console.error("[Droguería Backend] Failed to seed MongoDB database:", err);
+  }
+}
+
+async function connectToMongo() {
+  if (!MONGODB_URI) {
+    console.log("[Droguería Backend] MONGODB_URI not found in environment. Using local db-store.json");
+    return null;
+  }
+  try {
+    console.log("[Droguería Backend] Connecting to MongoDB Atlas...");
+    const client = new MongoClient(MONGODB_URI);
+    await client.connect();
+    console.log("[Droguería Backend] Connected successfully to MongoDB Atlas.");
+    mongoClient = client;
+    mongoDb = client.db();
+    
+    // Seed DB
+    await seedMongoDatabase();
+    return mongoDb;
+  } catch (err) {
+    console.error("[Droguería Backend] MongoDB connection failed. Falling back to local JSON store.", err);
+    return null;
+  }
+}
+
+// Database Abstraction Helpers
+async function getUsers() {
+  if (mongoDb) {
+    return await mongoDb.collection("users").find({}).toArray();
+  }
+  return loadDb().users;
+}
+
+async function addUser(user: any) {
+  if (mongoDb) {
+    await mongoDb.collection("users").insertOne(user);
+    return;
+  }
+  const db = loadDb();
+  db.users.push(user);
+  saveDb(db);
+}
+
+async function getBusinessConfig() {
+  if (mongoDb) {
+    const doc = await mongoDb.collection("config").findOne({ _id: "business_config" as any });
+    if (doc) {
+      const { _id, ...business } = doc;
+      return business;
+    }
+    return DEFAULT_STATE.config.business;
+  }
+  return loadDb().config.business;
+}
+
+async function updateBusinessConfig(business: any) {
+  if (mongoDb) {
+    await mongoDb.collection("config").updateOne(
+      { _id: "business_config" as any },
+      { $set: business },
+      { upsert: true }
+    );
+    return;
+  }
+  const db = loadDb();
+  db.config.business = business;
+  saveDb(db);
+}
+
+async function getProducts() {
+  if (mongoDb) {
+    return await mongoDb.collection("products").find({}).toArray();
+  }
+  return loadDb().products;
+}
+
+async function addProduct(product: any) {
+  if (mongoDb) {
+    await mongoDb.collection("products").insertOne(product);
+    return;
+  }
+  const db = loadDb();
+  db.products.push(product);
+  saveDb(db);
+}
+
+async function updateProduct(productId: string, updateData: any) {
+  if (mongoDb) {
+    const { _id, ...dataWithoutMongoId } = updateData;
+    await mongoDb.collection("products").updateOne({ id: productId }, { $set: dataWithoutMongoId });
+    return;
+  }
+  const db = loadDb();
+  const idx = db.products.findIndex(p => p.id === productId);
+  if (idx !== -1) {
+    db.products[idx] = { ...db.products[idx], ...updateData };
+    saveDb(db);
+  }
+}
+
+async function getSuppliers() {
+  if (mongoDb) {
+    return await mongoDb.collection("suppliers").find({}).toArray();
+  }
+  return loadDb().suppliers;
+}
+
+async function addSupplier(supplier: any) {
+  if (mongoDb) {
+    await mongoDb.collection("suppliers").insertOne(supplier);
+    return;
+  }
+  const db = loadDb();
+  db.suppliers.push(supplier);
+  saveDb(db);
+}
+
+async function getLaboratories() {
+  if (mongoDb) {
+    const doc = await mongoDb.collection("metadata").findOne({ _id: "lists" as any });
+    return doc?.laboratories || DEFAULT_STATE.laboratories;
+  }
+  return loadDb().laboratories;
+}
+
+async function addLaboratory(labName: string) {
+  if (mongoDb) {
+    await mongoDb.collection("metadata").updateOne(
+      { _id: "lists" as any },
+      { $addToSet: { laboratories: labName } as any },
+      { upsert: true }
+    );
+    return;
+  }
+  const db = loadDb();
+  if (!db.laboratories.includes(labName)) {
+    db.laboratories.push(labName);
+    saveDb(db);
+  }
+}
+
+async function getCategories() {
+  if (mongoDb) {
+    const doc = await mongoDb.collection("metadata").findOne({ _id: "lists" as any });
+    return doc?.categories || DEFAULT_STATE.categories;
+  }
+  return loadDb().categories;
+}
+
+async function addCategory(categoryName: string) {
+  if (mongoDb) {
+    await mongoDb.collection("metadata").updateOne(
+      { _id: "lists" as any },
+      { $addToSet: { categories: categoryName } as any },
+      { upsert: true }
+    );
+    return;
+  }
+  const db = loadDb();
+  if (!db.categories.includes(categoryName)) {
+    db.categories.push(categoryName);
+    saveDb(db);
+  }
+}
+
+async function getSales() {
+  if (mongoDb) {
+    return await mongoDb.collection("sales").find({}).toArray();
+  }
+  return loadDb().sales;
+}
+
+async function addSale(sale: any) {
+  if (mongoDb) {
+    await mongoDb.collection("sales").insertOne(sale);
+    return;
+  }
+  const db = loadDb();
+  db.sales.push(sale);
+  saveDb(db);
+}
+
+async function getClosures() {
+  if (mongoDb) {
+    return await mongoDb.collection("closures").find({}).toArray();
+  }
+  return loadDb().closures;
+}
+
+async function getClosure(date: string) {
+  if (mongoDb) {
+    return await mongoDb.collection("closures").findOne({ date, isClosed: false });
+  }
+  return loadDb().closures.find(c => c.date === date && !c.isClosed);
+}
+
+async function getClosedToday(date: string) {
+  if (mongoDb) {
+    return await mongoDb.collection("closures").findOne({ date, isClosed: true });
+  }
+  return loadDb().closures.find(c => c.date === date && c.isClosed);
+}
+
+async function saveClosure(closure: any) {
+  if (mongoDb) {
+    const { _id, ...rest } = closure;
+    await mongoDb.collection("closures").updateOne(
+      { id: closure.id },
+      { $set: rest },
+      { upsert: true }
+    );
+    return;
+  }
+  const db = loadDb();
+  const idx = db.closures.findIndex(c => c.id === closure.id);
+  if (idx === -1) {
+    db.closures.push(closure);
+  } else {
+    db.closures[idx] = closure;
+  }
+  saveDb(db);
+}
+
 async function startServer() {
   const app = express();
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-  // Initialize DB
-  let db = loadDb();
+  // Connect to MongoDB Atlas
+  await connectToMongo();
 
   // Root health check
   app.get("/api/health", (req, res) => {
@@ -220,10 +515,10 @@ async function startServer() {
   });
 
   // Authentication endpoints
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body;
-    db = loadDb();
-    const user = db.users.find(u => u.email === email && u.password === password);
+    const users = await getUsers();
+    const user = users.find(u => u.email === email && u.password === password);
     if (user) {
       const { password, ...userWithoutPassword } = user;
       res.json({ success: true, user: userWithoutPassword });
@@ -232,10 +527,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/auth/register", (req, res) => {
+  app.post("/api/auth/register", async (req, res) => {
     const { name, email, password, role } = req.body;
-    db = loadDb();
-    const exists = db.users.some(u => u.email === email);
+    const users = await getUsers();
+    const exists = users.some(u => u.email === email);
     if (exists) {
       return res.status(400).json({ success: false, message: "El correo ya está registrado." });
     }
@@ -248,36 +543,33 @@ async function startServer() {
       role: role || "worker",
       profileImage: ""
     };
-    db.users.push(newUser);
-    saveDb(db);
+    await addUser(newUser);
 
     const { password: _, ...userWithoutPassword } = newUser;
     res.status(201).json({ success: true, user: userWithoutPassword });
   });
 
   // Profile configuration config
-  app.get("/api/profile", (req, res) => {
-    db = loadDb();
-    res.json({ business: db.config.business });
+  app.get("/api/profile", async (req, res) => {
+    const business = await getBusinessConfig();
+    res.json({ business });
   });
 
-  app.post("/api/profile/business", (req, res) => {
-    db = loadDb();
+  app.post("/api/profile/business", async (req, res) => {
     const { name, nit, foundationYear, phone, address, city, logoUrl } = req.body;
-    db.config.business = { name, nit, foundationYear, phone, address, city, logoUrl };
-    saveDb(db);
-    res.json({ success: true, business: db.config.business });
+    const business = { name, nit, foundationYear, phone, address, city, logoUrl };
+    await updateBusinessConfig(business);
+    res.json({ success: true, business });
   });
 
   // Inventory endpoint: List all products
-  app.get("/api/inventory", (req, res) => {
-    db = loadDb();
-    res.json(db.products);
+  app.get("/api/inventory", async (req, res) => {
+    const productsList = await getProducts();
+    res.json(productsList);
   });
 
   // Create initial product
-  app.post("/api/inventory/initial", (req, res) => {
-    db = loadDb();
+  app.post("/api/inventory/initial", async (req, res) => {
     const { name, expirationDate, laboratory, cost, price, priceUnits, category, quantityOnSkins, quantityUnits, conversionFactor, minStockAlert, barcode, fotoUrl } = req.body;
 
     if (!name || !laboratory || !category) {
@@ -302,58 +594,51 @@ async function startServer() {
       isActive: true
     };
 
-    db.products.push(newProduct);
-    saveDb(db);
+    await addProduct(newProduct);
     res.status(201).json({ success: true, product: newProduct });
   });
 
   // Inbound supplier invoice (load items)
-  app.post("/api/inventory/invoice", (req, res) => {
-    db = loadDb();
+  app.post("/api/inventory/invoice", async (req, res) => {
     const { supplierId, productId, quantitySkins, quantityUnits, cost, price, expirationDate } = req.body;
 
-    const prodIdx = db.products.findIndex(p => p.id === productId);
-    if (prodIdx === -1) {
+    const productsList = await getProducts();
+    const p = productsList.find(prod => prod.id === productId);
+    if (!p) {
       return res.status(404).json({ success: false, message: "Producto no encontrado." });
     }
 
-    // Add stock
-    const p = db.products[prodIdx];
     p.quantityOnSkins += Number(quantitySkins) || 0;
     p.quantityUnits += Number(quantityUnits) || 0;
     if (cost) p.cost = Number(cost);
     if (price) p.price = Number(price);
     if (expirationDate) p.expirationDate = expirationDate;
 
-    // Handle normalization of units based on conversion factor
     if (p.quantityUnits >= p.conversionFactor && p.conversionFactor > 1) {
       const additionalSkins = Math.floor(p.quantityUnits / p.conversionFactor);
       p.quantityOnSkins += additionalSkins;
       p.quantityUnits = p.quantityUnits % p.conversionFactor;
     }
 
-    db.products[prodIdx] = p;
-    saveDb(db);
-
+    await updateProduct(productId, p);
     res.json({ success: true, product: p });
   });
 
   // Bulk inbound supplier invoice loading (multi-item)
-  app.post("/api/inventory/invoice/bulk", (req, res) => {
-    db = loadDb();
+  app.post("/api/inventory/invoice/bulk", async (req, res) => {
     const { supplierId, items } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "No se proporcionaron productos para cargar." });
     }
 
-    const updatedProducts = [];
+    const productsList = await getProducts();
+    let updatedCount = 0;
 
     for (const item of items) {
       const { productId, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate } = item;
-      const prodIdx = db.products.findIndex(p => p.id === productId);
-      if (prodIdx !== -1) {
-        const p = db.products[prodIdx];
+      const p = productsList.find(prod => prod.id === productId);
+      if (p) {
         p.quantityOnSkins += Number(quantitySkins) || 0;
         p.quantityUnits += Number(quantityUnits) || 0;
         if (cost !== undefined && cost !== null && cost > 0) p.cost = Number(cost);
@@ -361,30 +646,27 @@ async function startServer() {
         if (priceUnits !== undefined && priceUnits !== null && priceUnits > 0) p.priceUnits = Number(priceUnits);
         if (expirationDate) p.expirationDate = expirationDate;
 
-        // Handle normalization of units based on conversion factor
         if (p.quantityUnits >= p.conversionFactor && p.conversionFactor > 1) {
           const additionalSkins = Math.floor(p.quantityUnits / p.conversionFactor);
           p.quantityOnSkins += additionalSkins;
           p.quantityUnits = p.quantityUnits % p.conversionFactor;
         }
 
-        db.products[prodIdx] = p;
-        updatedProducts.push(p);
+        await updateProduct(productId, p);
+        updatedCount++;
       }
     }
 
-    saveDb(db);
-    res.json({ success: true, count: updatedProducts.length });
+    res.json({ success: true, count: updatedCount });
   });
 
   // Manage suppliers, labs, categories
-  app.get("/api/inventory/manage/suppliers", (req, res) => {
-    db = loadDb();
-    res.json(db.suppliers);
+  app.get("/api/inventory/manage/suppliers", async (req, res) => {
+    const suppliersList = await getSuppliers();
+    res.json(suppliersList);
   });
 
-  app.post("/api/inventory/manage/suppliers", (req, res) => {
-    db = loadDb();
+  app.post("/api/inventory/manage/suppliers", async (req, res) => {
     const { companyName, nit, phone, whatsapp } = req.body;
     if (!companyName) {
       return res.status(400).json({ success: false, message: "Nombre de la empresa es obligatorio." });
@@ -396,74 +678,68 @@ async function startServer() {
       phone: phone || "",
       whatsapp: whatsapp || ""
     };
-    db.suppliers.push(newSupplier);
-    saveDb(db);
+    await addSupplier(newSupplier);
     res.status(201).json({ success: true, supplier: newSupplier });
   });
 
-  app.get("/api/inventory/manage/laboratories", (req, res) => {
-    db = loadDb();
-    res.json(db.laboratories);
+  app.get("/api/inventory/manage/laboratories", async (req, res) => {
+    const laboratoriesList = await getLaboratories();
+    res.json(laboratoriesList);
   });
 
-  app.post("/api/inventory/manage/laboratories", (req, res) => {
-    db = loadDb();
+  app.post("/api/inventory/manage/laboratories", async (req, res) => {
     const { name } = req.body;
-    if (!name || db.laboratories.includes(name)) {
+    const laboratoriesList = await getLaboratories();
+    if (!name || laboratoriesList.includes(name)) {
       return res.status(400).json({ success: false, message: "Laboratorio inválido o duplicado." });
     }
-    db.laboratories.push(name);
-    saveDb(db);
-    res.status(201).json({ success: true, laboratories: db.laboratories });
+    await addLaboratory(name);
+    const updated = await getLaboratories();
+    res.status(201).json({ success: true, laboratories: updated });
   });
 
-  app.get("/api/inventory/manage/categories", (req, res) => {
-    db = loadDb();
-    res.json(db.categories);
+  app.get("/api/inventory/manage/categories", async (req, res) => {
+    const categoriesList = await getCategories();
+    res.json(categoriesList);
   });
 
-  app.post("/api/inventory/manage/categories", (req, res) => {
-    db = loadDb();
+  app.post("/api/inventory/manage/categories", async (req, res) => {
     const { name } = req.body;
-    if (!name || db.categories.includes(name)) {
+    const categoriesList = await getCategories();
+    if (!name || categoriesList.includes(name)) {
       return res.status(400).json({ success: false, message: "Categoría inválida o duplicada." });
     }
-    db.categories.push(name);
-    saveDb(db);
-    res.status(201).json({ success: true, categories: db.categories });
+    await addCategory(name);
+    const updated = await getCategories();
+    res.status(201).json({ success: true, categories: updated });
   });
 
   // Register POS Sales (facturación)
-  app.post("/api/sales", (req, res) => {
-    db = loadDb();
+  app.post("/api/sales", async (req, res) => {
     const { sellerId, sellerName, items, total, clientNit } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, message: "No hay productos en la factura." });
     }
 
+    const productsList = await getProducts();
+
     // Process product stock reduction
     for (const item of items) {
-      const prodIdx = db.products.findIndex(p => p.id === item.productId);
-      if (prodIdx !== -1) {
-        const prod = db.products[prodIdx];
-        
-        // Deduct quantities
+      const prod = productsList.find(p => p.id === item.productId);
+      if (prod) {
         let deductSkins = item.quantitySkins || 0;
         let deductUnits = item.quantityUnits || 0;
 
-        // Convert deduct quantites to total units
         const totalUnitsInStock = (prod.quantityOnSkins * prod.conversionFactor) + prod.quantityUnits;
         const totalUnitsToDeduct = (deductSkins * prod.conversionFactor) + deductUnits;
 
         if (totalUnitsInStock < totalUnitsToDeduct) {
-          // Allow sale but emit warning/cap stock at zero in offline sync environments
           console.warn(`Inventario negativo detectado para ${prod.name}`);
         }
 
         const remainingTotalUnits = Math.max(0, totalUnitsInStock - totalUnitsToDeduct);
         
-        // Normalize back to skins and units
         if (prod.conversionFactor > 1) {
           prod.quantityOnSkins = Math.floor(remainingTotalUnits / prod.conversionFactor);
           prod.quantityUnits = remainingTotalUnits % prod.conversionFactor;
@@ -472,11 +748,12 @@ async function startServer() {
           prod.quantityUnits = 0;
         }
         
-        db.products[prodIdx] = prod;
+        await updateProduct(prod.id, prod);
       }
     }
 
-    const nextInvoiceNo = "FC-" + String(db.sales.length + 1).padStart(5, "0");
+    const salesList = await getSales();
+    const nextInvoiceNo = "FC-" + String(salesList.length + 1).padStart(5, "0");
     const newInvoice = {
       id: "sale-" + Date.now(),
       invoiceNumber: nextInvoiceNo,
@@ -488,52 +765,47 @@ async function startServer() {
       clientNit: clientNit || ""
     };
 
-    db.sales.push(newInvoice);
+    await addSale(newInvoice);
 
-    // Dynamic Daily cash balance increment
+    // Daily cash balance increment
     const todayStr = new Date().toISOString().split("T")[0];
-    let closureIdx = db.closures.findIndex(c => c.date === todayStr && !c.isClosed);
-    if (closureIdx === -1) {
-      // Create new open closure
-      const newClosure = {
+    let closure = await getClosure(todayStr);
+    if (!closure) {
+      closure = {
         id: "close-" + todayStr,
         date: todayStr,
         totalSalesCount: 1,
         totalSalesRevenue: total,
         totalExpenses: 0,
-        initialCash: 100000, // standard base box
+        initialCash: 100000,
         finalCash: 100000 + total,
         expenses: [],
         isClosed: false
       };
-      db.closures.push(newClosure);
     } else {
-      db.closures[closureIdx].totalSalesCount += 1;
-      db.closures[closureIdx].totalSalesRevenue += total;
-      db.closures[closureIdx].finalCash += total;
+      closure.totalSalesCount += 1;
+      closure.totalSalesRevenue += total;
+      closure.finalCash += total;
     }
 
-    saveDb(db);
+    await saveClosure(closure);
     res.status(201).json({ success: true, invoice: newInvoice });
   });
 
-  app.get("/api/sales", (req, res) => {
-    db = loadDb();
-    res.json(db.sales);
+  app.get("/api/sales", async (req, res) => {
+    const salesList = await getSales();
+    res.json(salesList);
   });
 
   // Daily cash closure management
-  app.get("/api/closure", (req, res) => {
-    db = loadDb();
+  app.get("/api/closure", async (req, res) => {
     const todayStr = new Date().toISOString().split("T")[0];
-    let active = db.closures.find(c => c.date === todayStr && !c.isClosed);
+    let active = await getClosure(todayStr);
     if (!active) {
-      // Find today's closed one, or default creating an empty representation
-      const closedToday = db.closures.find(c => c.date === todayStr && c.isClosed);
+      const closedToday = await getClosedToday(todayStr);
       if (closedToday) {
         return res.json(closedToday);
       }
-      // Create lazy structure
       active = {
         id: "close-" + todayStr,
         date: todayStr,
@@ -549,8 +821,7 @@ async function startServer() {
     res.json(active);
   });
 
-  app.post("/api/closure/expense", (req, res) => {
-    db = loadDb();
+  app.post("/api/closure/expense", async (req, res) => {
     const todayStr = new Date().toISOString().split("T")[0];
     const { description, amount } = req.body;
 
@@ -558,9 +829,10 @@ async function startServer() {
       return res.status(400).json({ success: false, message: "Descripción y valor obligatorios." });
     }
 
-    let closureIdx = db.closures.findIndex(c => c.date === todayStr && !c.isClosed);
-    if (closureIdx === -1) {
-      const newClosure = {
+    let closure = await getClosure(todayStr);
+    const expObj = { id: "exp-" + Date.now(), description, amount: Number(amount), timestamp: new Date().toISOString() };
+    if (!closure) {
+      closure = {
         id: "close-" + todayStr,
         date: todayStr,
         totalSalesCount: 0,
@@ -568,63 +840,61 @@ async function startServer() {
         totalExpenses: Number(amount),
         initialCash: 100000,
         finalCash: 100000 - Number(amount),
-        expenses: [{ id: "exp-" + Date.now(), description, amount: Number(amount), timestamp: new Date().toISOString() }],
+        expenses: [expObj],
         isClosed: false
       };
-      db.closures.push(newClosure);
     } else {
-      const exp = { id: "exp-" + Date.now(), description, amount: Number(amount), timestamp: new Date().toISOString() };
-      db.closures[closureIdx].expenses.push(exp);
-      db.closures[closureIdx].totalExpenses += Number(amount);
-      db.closures[closureIdx].finalCash -= Number(amount);
+      closure.expenses.push(expObj);
+      closure.totalExpenses += Number(amount);
+      closure.finalCash -= Number(amount);
     }
 
-    saveDb(db);
-    res.json({ success: true, closure: db.closures.find(c => c.date === todayStr && !c.isClosed) });
+    await saveClosure(closure);
+    res.json({ success: true, closure });
   });
 
-  app.post("/api/closure/close", (req, res) => {
-    db = loadDb();
+  app.post("/api/closure/close", async (req, res) => {
     const todayStr = new Date().toISOString().split("T")[0];
-    let closureIdx = db.closures.findIndex(c => c.date === todayStr && !c.isClosed);
+    const closure = await getClosure(todayStr);
 
-    if (closureIdx === -1) {
+    if (!closure) {
       return res.status(404).json({ success: false, message: "No hay cierre activo para procesar." });
     }
 
-    db.closures[closureIdx].isClosed = true;
-    db.closures[closureIdx].closedAt = new Date().toISOString();
-    saveDb(db);
+    closure.isClosed = true;
+    closure.closedAt = new Date().toISOString();
+    await saveClosure(closure);
 
-    res.json({ success: true, closure: db.closures[closureIdx] });
+    res.json({ success: true, closure });
   });
 
-  app.get("/api/closure/history", (req, res) => {
-    db = loadDb();
-    res.json(db.closures);
+  app.get("/api/closure/history", async (req, res) => {
+    const historyList = await getClosures();
+    res.json(historyList);
   });
 
-  // Client Offline Sychronization Simulation API
-  app.post("/api/sync", (req, res) => {
-    db = loadDb();
-    const { clientActions } = req.body; // array of operations performed while offline
+  // Client Offline Synchronization API
+  app.post("/api/sync", async (req, res) => {
+    const { clientActions } = req.body;
     const logs: any[] = [];
     
     if (!clientActions || clientActions.length === 0) {
       return res.json({ success: true, syncedCount: 0, logs: ["Sin cambios offline."] });
     }
 
-    // Process each queue element. In real system, does CRDT/Watermark reconciliation
+    const productsList = await getProducts();
+    const salesList = await getSales();
+
     for (const action of clientActions) {
       const { type, entity, data, timestamp } = action;
       
       if (entity === "expense") {
         const todayStr = new Date(timestamp).toISOString().split("T")[0];
-        let closureIdx = db.closures.findIndex(c => c.date === todayStr && !c.isClosed);
+        let closure = await getClosure(todayStr);
         const expObj = { id: data.id || "exp-" + Date.now(), description: data.description, amount: Number(data.amount), timestamp };
         
-        if (closureIdx === -1) {
-          db.closures.push({
+        if (!closure) {
+          closure = {
             id: "close-" + todayStr,
             date: todayStr,
             totalSalesCount: 0,
@@ -634,20 +904,19 @@ async function startServer() {
             finalCash: 100000 - Number(data.amount),
             expenses: [expObj],
             isClosed: false
-          });
+          };
         } else {
-          db.closures[closureIdx].expenses.push(expObj);
-          db.closures[closureIdx].totalExpenses += Number(data.amount);
-          db.closures[closureIdx].finalCash -= Number(data.amount);
+          closure.expenses.push(expObj);
+          closure.totalExpenses += Number(data.amount);
+          closure.finalCash -= Number(data.amount);
         }
+        await saveClosure(closure);
         logs.push(`Gasto sincronizado exitosamente: "${data.description}" por $${data.amount}`);
       }
       else if (entity === "sale") {
-        // Decrement product quantities
         for (const item of data.items) {
-          const prodIdx = db.products.findIndex(p => p.id === item.productId);
-          if (prodIdx !== -1) {
-            const prod = db.products[prodIdx];
+          const prod = productsList.find(p => p.id === item.productId);
+          if (prod) {
             const totalUnitsInStock = (prod.quantityOnSkins * prod.conversionFactor) + prod.quantityUnits;
             const totalUnitsToDeduct = ((item.quantitySkins || 0) * prod.conversionFactor) + (item.quantityUnits || 0);
             const remainingTotalUnits = Math.max(0, totalUnitsInStock - totalUnitsToDeduct);
@@ -659,25 +928,27 @@ async function startServer() {
               prod.quantityOnSkins = remainingTotalUnits;
               prod.quantityUnits = 0;
             }
+            await updateProduct(prod.id, prod);
           }
         }
 
-        db.sales.push({
+        const invoiceNo = data.invoiceNumber || ("FC-" + String(salesList.length + 1).padStart(5, "0"));
+        const newSale = {
           id: data.id || "sale-" + Date.now(),
-          invoiceNumber: data.invoiceNumber || ("FC-" + String(db.sales.length + 1).padStart(5, "0")),
+          invoiceNumber: invoiceNo,
           dateTime: timestamp,
           sellerId: data.sellerId,
           sellerName: data.sellerName,
           items: data.items,
           total: data.total,
           clientNit: data.clientNit || ""
-        });
+        };
+        await addSale(newSale);
 
-        // Add to cash register closure
         const todayStr = new Date(timestamp).toISOString().split("T")[0];
-        let closureIdx = db.closures.findIndex(c => c.date === todayStr && !c.isClosed);
-        if (closureIdx === -1) {
-          db.closures.push({
+        let closure = await getClosure(todayStr);
+        if (!closure) {
+          closure = {
             id: "close-" + todayStr,
             date: todayStr,
             totalSalesCount: 1,
@@ -687,19 +958,19 @@ async function startServer() {
             finalCash: 100000 + data.total,
             expenses: [],
             isClosed: false
-          });
+          };
         } else {
-          db.closures[closureIdx].totalSalesCount += 1;
-          db.closures[closureIdx].totalSalesRevenue += data.total;
-          db.closures[closureIdx].finalCash += data.total;
+          closure.totalSalesCount += 1;
+          closure.totalSalesRevenue += data.total;
+          closure.finalCash += data.total;
         }
-        logs.push(`Factura ${data.invoiceNumber || "FC-Offline"} por $${data.total} sincronizada correctamente.`);
+        await saveClosure(closure);
+        logs.push(`Factura ${invoiceNo} por $${data.total} sincronizada correctamente.`);
       }
       else if (entity === "product") {
-        // Handle new product registered offline
-        const exists = db.products.some(p => p.id === data.id || p.name.toLowerCase() === data.name.toLowerCase());
-        if (!exists) {
-          db.products.push({
+        const prodExists = productsList.some(p => p.id === data.id || p.name.toLowerCase() === data.name.toLowerCase());
+        if (!prodExists) {
+          const newP = {
             id: data.id || "prod-" + Date.now(),
             name: data.name,
             expirationDate: data.expirationDate,
@@ -714,7 +985,8 @@ async function startServer() {
             barcode: data.barcode || "",
             fotoUrl: data.fotoUrl || "",
             isActive: true
-          });
+          };
+          await addProduct(newP);
           logs.push(`Nuevo producto offline registrado: "${data.name}"`);
         } else {
           logs.push(`Reconciliación: Producto "${data.name}" ya existía en la nube, se consolida stock.`);
@@ -724,9 +996,8 @@ async function startServer() {
         const itemsToProcess = Array.isArray(data.items) ? data.items : [data];
         let restockedCount = 0;
         for (const item of itemsToProcess) {
-          const prodIdx = db.products.findIndex(p => p.id === item.productId);
-          if (prodIdx !== -1) {
-            const p = db.products[prodIdx];
+          const p = productsList.find(prod => prod.id === item.productId);
+          if (p) {
             p.quantityOnSkins += Number(item.quantitySkins) || 0;
             p.quantityUnits += Number(item.quantityUnits) || 0;
             if (item.cost) p.cost = Number(item.cost);
@@ -734,13 +1005,12 @@ async function startServer() {
             if (item.priceUnits) p.priceUnits = Number(item.priceUnits);
             if (item.expirationDate) p.expirationDate = item.expirationDate;
 
-            // Normalize units
             if (p.quantityUnits >= p.conversionFactor && p.conversionFactor > 1) {
               const additionalSkins = Math.floor(p.quantityUnits / p.conversionFactor);
               p.quantityOnSkins += additionalSkins;
               p.quantityUnits = p.quantityUnits % p.conversionFactor;
             }
-            db.products[prodIdx] = p;
+            await updateProduct(p.id, p);
             restockedCount++;
           }
         }
@@ -748,7 +1018,6 @@ async function startServer() {
       }
     }
 
-    saveDb(db);
     res.json({ success: true, syncedCount: clientActions.length, logs });
   });
 
