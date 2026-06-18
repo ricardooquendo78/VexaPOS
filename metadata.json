@@ -1,0 +1,10 @@
+{
+  "name": "Vexa POS",
+  "description": "Sistema de gestión e inventario POS para droguería con capacidades de sincronización offline-first y portal de consultoría arquitectónica.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

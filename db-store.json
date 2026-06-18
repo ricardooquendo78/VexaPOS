@@ -1,0 +1,392 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "Administrador Vexa POS",
+      "email": "admin@vexapos.com",
+      "password": "123",
+      "role": "admin",
+      "profileImage": ""
+    },
+    {
+      "id": "2",
+      "name": "Laura Valentina",
+      "email": "laura@vexapos.com",
+      "password": "123",
+      "role": "worker",
+      "profileImage": ""
+    }
+  ],
+  "config": {
+    "business": {
+      "name": "Drogueria gratamira",
+      "nit": "901.405.321-4",
+      "foundationYear": "2018",
+      "phone": "+57 (311) 456-7890",
+      "address": "Calle 134 # 58-20, Suba",
+      "city": "Bogotá, Colombia",
+      "logoUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCACWAJYDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/2Q=="
+    }
+  },
+  "products": [
+    {
+      "id": "prod-1",
+      "name": "Dolex Forte Tabletas 500mg",
+      "expirationDate": "2028-09-12",
+      "laboratory": "GSK",
+      "cost": 15000,
+      "price": 24000,
+      "priceUnits": 2500,
+      "category": "Analgésicos",
+      "quantityOnSkins": 15,
+      "quantityUnits": 4,
+      "conversionFactor": 12,
+      "minStockAlert": 10,
+      "barcode": "7702008123456",
+      "fotoUrl": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300",
+      "isActive": true
+    },
+    {
+      "id": "prod-2",
+      "name": "Acetaminofén Genfar 500mg",
+      "expirationDate": "2027-11-20",
+      "laboratory": "Genfar",
+      "cost": 4000,
+      "price": 8000,
+      "priceUnits": 500,
+      "category": "Analgésicos",
+      "quantityOnSkins": 37,
+      "quantityUnits": 0,
+      "conversionFactor": 20,
+      "minStockAlert": 15,
+      "barcode": "7702008777777",
+      "fotoUrl": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300",
+      "isActive": true
+    },
+    {
+      "id": "prod-3",
+      "name": "Amoxicilina 500mg MK",
+      "expirationDate": "2027-05-15",
+      "laboratory": "MK",
+      "cost": 12000,
+      "price": 18000,
+      "priceUnits": 800,
+      "category": "Antibióticos",
+      "quantityOnSkins": 8,
+      "quantityUnits": 15,
+      "conversionFactor": 30,
+      "minStockAlert": 5,
+      "barcode": "7702008654321",
+      "fotoUrl": "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=300",
+      "isActive": true
+    },
+    {
+      "id": "prod-4",
+      "name": "Emulsión de Scott Naranja",
+      "expirationDate": "2028-01-10",
+      "laboratory": "GSK",
+      "cost": 21000,
+      "price": 29500,
+      "category": "Vitaminas y Multivitamínicos",
+      "quantityOnSkins": 23,
+      "quantityUnits": 0,
+      "conversionFactor": 1,
+      "minStockAlert": 8,
+      "barcode": "7702008999888",
+      "fotoUrl": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=300",
+      "isActive": true
+    },
+    {
+      "id": "prod-5",
+      "name": "Loratadina 10mg Tecnoquímicas",
+      "expirationDate": "2027-04-18",
+      "laboratory": "Tecnoquímicas",
+      "cost": 3500,
+      "price": 7000,
+      "priceUnits": 900,
+      "category": "Antihistamínicos",
+      "quantityOnSkins": 49,
+      "quantityUnits": 6,
+      "conversionFactor": 10,
+      "minStockAlert": 12,
+      "barcode": "7702008222111",
+      "fotoUrl": "",
+      "isActive": true
+    },
+    {
+      "id": "prod-1781724302789",
+      "name": "acetaminofen",
+      "expirationDate": "2026-06-17",
+      "laboratory": "Abbott",
+      "cost": 300,
+      "price": 1000,
+      "category": "Analgésicos",
+      "quantityOnSkins": 385,
+      "quantityUnits": 0,
+      "conversionFactor": 1,
+      "minStockAlert": 20,
+      "barcode": "",
+      "fotoUrl": "",
+      "isActive": true
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "sup-1",
+      "companyName": "Coaspharma S.A.S",
+      "nit": "800.231.543-9",
+      "phone": "601-5432100",
+      "whatsapp": "+573155555555"
+    },
+    {
+      "id": "sup-2",
+      "companyName": "Droguerías Aliadas de Colombia",
+      "nit": "900.112.441-2",
+      "phone": "601-9876543",
+      "whatsapp": "+573212222222"
+    },
+    {
+      "id": "sup-3",
+      "companyName": "Distribuidora Nacional de Fármacos",
+      "nit": "890.301.218-0",
+      "phone": "602-3334455",
+      "whatsapp": "+573204445555"
+    }
+  ],
+  "laboratories": [
+    "Genfar",
+    "MK",
+    "Tecnoquímicas",
+    "GSK",
+    "Bayer",
+    "Abbott",
+    "Sanofi",
+    "Roche"
+  ],
+  "categories": [
+    "Analgésicos",
+    "Antibióticos",
+    "Antihistamínicos",
+    "Vitaminas y Multivitamínicos",
+    "Inyectables",
+    "Cuidado Bebé",
+    "Higiene y Salud Orgánica"
+  ],
+  "sales": [
+    {
+      "id": "sale-1",
+      "invoiceNumber": "FC-00001",
+      "dateTime": "2026-06-16T14:35:00-05:00",
+      "sellerId": "2",
+      "sellerName": "Laura Valentina",
+      "items": [
+        {
+          "productId": "prod-1",
+          "productName": "Dolex Forte Tabletas 500mg",
+          "quantitySkins": 1,
+          "quantityUnits": 0,
+          "price": 24000,
+          "subtotal": 24000
+        },
+        {
+          "productId": "prod-5",
+          "productName": "Loratadina 10mg Tecnoquímicas",
+          "quantitySkins": 0,
+          "quantityUnits": 2,
+          "price": 700,
+          "subtotal": 1400
+        }
+      ],
+      "total": 25400,
+      "clientNit": "123456789"
+    },
+    {
+      "id": "sale-2",
+      "invoiceNumber": "FC-00002",
+      "dateTime": "2026-06-17T09:20:00-05:00",
+      "sellerId": "1",
+      "sellerName": "Administrador Vexa POS",
+      "items": [
+        {
+          "productId": "prod-3",
+          "productName": "Amoxicilina 500mg MK",
+          "quantitySkins": 0,
+          "quantityUnits": 10,
+          "price": 600,
+          "subtotal": 6000
+        }
+      ],
+      "total": 6000
+    },
+    {
+      "id": "sale-1781724321237",
+      "invoiceNumber": "FC-00003",
+      "dateTime": "2026-06-17T19:25:21.237Z",
+      "sellerId": "1",
+      "sellerName": "Administrador Vexa POS",
+      "items": [
+        {
+          "productId": "prod-1781724302789",
+          "productName": "acetaminofen",
+          "quantitySkins": 13,
+          "quantityUnits": 0,
+          "price": 1000,
+          "subtotal": 13000
+        },
+        {
+          "productId": "prod-4",
+          "productName": "Emulsión de Scott Naranja",
+          "quantitySkins": 1,
+          "quantityUnits": 0,
+          "price": 29500,
+          "subtotal": 29500
+        }
+      ],
+      "total": 42500,
+      "clientNit": ""
+    },
+    {
+      "id": "sale-1781724494070",
+      "invoiceNumber": "FC-00004",
+      "dateTime": "2026-06-17T19:28:14.071Z",
+      "sellerId": "1",
+      "sellerName": "Administrador Vexa POS",
+      "items": [
+        {
+          "productId": "prod-2",
+          "productName": "Acetaminofén Genfar 500mg",
+          "quantitySkins": 1,
+          "quantityUnits": 0,
+          "price": 8000,
+          "subtotal": 8000
+        }
+      ],
+      "total": 8000,
+      "clientNit": ""
+    },
+    {
+      "id": "sale-1781800710719",
+      "invoiceNumber": "FC-00005",
+      "dateTime": "2026-06-18T16:38:30.719Z",
+      "sellerId": "1",
+      "sellerName": "Administrador Vexa POS",
+      "items": [
+        {
+          "productId": "prod-2",
+          "productName": "Acetaminofén Genfar 500mg",
+          "quantitySkins": 2,
+          "quantityUnits": 0,
+          "price": 8000,
+          "subtotal": 16000
+        },
+        {
+          "productId": "prod-4",
+          "productName": "Emulsión de Scott Naranja",
+          "quantitySkins": 1,
+          "quantityUnits": 0,
+          "price": 29500,
+          "subtotal": 29500
+        }
+      ],
+      "total": 45500,
+      "clientNit": ""
+    },
+    {
+      "id": "sale-1781800846031",
+      "invoiceNumber": "FC-00006",
+      "dateTime": "2026-06-18T16:40:46.031Z",
+      "sellerId": "1",
+      "sellerName": "Administrador Vexa POS",
+      "items": [
+        {
+          "productId": "prod-5",
+          "productName": "Loratadina 10mg Tecnoquímicas",
+          "quantitySkins": 1,
+          "quantityUnits": 0,
+          "price": 7000,
+          "subtotal": 7000
+        },
+        {
+          "productId": "prod-1781724302789",
+          "productName": "acetaminofen",
+          "quantitySkins": 1,
+          "quantityUnits": 0,
+          "price": 1000,
+          "subtotal": 1000
+        }
+      ],
+      "total": 8000,
+      "clientNit": "123123123"
+    },
+    {
+      "id": "sale-1781800862383",
+      "invoiceNumber": "FC-00007",
+      "dateTime": "2026-06-18T16:41:02.383Z",
+      "sellerId": "1",
+      "sellerName": "Administrador Vexa POS",
+      "items": [
+        {
+          "productId": "prod-1781724302789",
+          "productName": "acetaminofen",
+          "quantitySkins": 1,
+          "quantityUnits": 0,
+          "price": 1000,
+          "subtotal": 1000
+        }
+      ],
+      "total": 1000,
+      "clientNit": "123123123"
+    }
+  ],
+  "closures": [
+    {
+      "id": "close-2026-06-16",
+      "date": "2026-06-16",
+      "totalSalesCount": 1,
+      "totalSalesRevenue": 25400,
+      "totalExpenses": 5000,
+      "initialCash": 100000,
+      "finalCash": 120400,
+      "expenses": [
+        {
+          "id": "exp-1",
+          "description": "Bolsas plásticas y empaques",
+          "amount": 5000,
+          "timestamp": "2026-06-16T16:00:00-05:00"
+        }
+      ],
+      "isClosed": true,
+      "closedAt": "2026-06-16T21:00:00-05:00"
+    },
+    {
+      "id": "close-2026-06-17",
+      "date": "2026-06-17",
+      "totalSalesCount": 2,
+      "totalSalesRevenue": 50500,
+      "totalExpenses": 20000,
+      "initialCash": 100000,
+      "finalCash": 130500,
+      "expenses": [
+        {
+          "id": "exp-1781723728656",
+          "description": "Decoración",
+          "amount": 20000,
+          "timestamp": "2026-06-17T19:15:28.656Z"
+        }
+      ],
+      "isClosed": false
+    },
+    {
+      "id": "close-2026-06-18",
+      "date": "2026-06-18",
+      "totalSalesCount": 3,
+      "totalSalesRevenue": 54500,
+      "totalExpenses": 0,
+      "initialCash": 100000,
+      "finalCash": 154500,
+      "expenses": [],
+      "isClosed": false
+    }
+  ],
+  "syncStatus": "synchronized"
+}
