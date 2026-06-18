@@ -47,6 +47,47 @@ export default function PerfilTab() {
     reader.readAsDataURL(file);
   };
 
+  const handleUserProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 150;
+        const MAX_HEIGHT = 150;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          setProfileImage(dataUrl);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <>
       {/* TAB CONTENT: PERFIL CONFIGURATION */}
@@ -217,14 +258,33 @@ export default function PerfilTab() {
                     </div>
 
                     <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Foto de Perfil (URL)</label>
-                      <input
-                        type="text"
-                        value={profileImage}
-                        onChange={(e) => setProfileImage(e.target.value)}
-                        placeholder="Inserta dirección de foto"
-                        className="w-full px-3 py-1.5 border bg-white rounded-md text-xs"
-                      />
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Foto de Perfil</label>
+                      {profileImage ? (
+                        <div className="relative border border-slate-200 rounded-lg p-2 bg-slate-50 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <img src={profileImage} alt="Foto de perfil" className="w-12 h-12 rounded-full object-cover border" />
+                            <span className="text-[10px] text-emerald-600 font-semibold">Foto cargada y optimizada</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setProfileImage('')}
+                            className="text-slate-450 hover:text-rose-600 p-1.5 transition cursor-pointer"
+                            title="Eliminar foto de perfil"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUserProfileImageUpload}
+                            className="w-full px-2 py-1.5 border border-slate-200 bg-white rounded-md text-[10px] cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+                          />
+                          <p className="text-[10px] text-slate-400">Selecciona una imagen de perfil. Se optimizará y guardará de forma liviana.</p>
+                        </div>
+                      )}
                     </div>
 
                     <button

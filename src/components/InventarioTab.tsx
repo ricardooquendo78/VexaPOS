@@ -5,7 +5,7 @@ import TechAdvisory from './TechAdvisory';
 import BarcodeScannerModal from './BarcodeScannerModal';
 
 export default function InventarioTab() {
-  const { isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor } = useAppContext();
+  const { isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor, handleDeleteSupplier, handleDeleteLab, handleDeleteCat } = useAppContext();
 
   const [showBarcodeScannerForNewProduct, setShowBarcodeScannerForNewProduct] = React.useState(false);
   const [showBarcodeScannerForRestock, setShowBarcodeScannerForRestock] = React.useState(false);
@@ -994,10 +994,20 @@ export default function InventarioTab() {
                           <h4 className="font-bold text-xs uppercase text-slate-400 tracking-wider">Proveedores Registrados</h4>
                           <div className="space-y-2 max-h-80 overflow-y-auto">
                             {suppliers.map(sup => (
-                              <div key={sup.id} className="p-3 bg-slate-50 rounded-lg border border-slate-150 text-xs">
-                                <span className="font-semibold text-slate-950 block">{sup.companyName}</span>
-                                <p className="text-slate-500">NIT: {sup.nit} | Tel: {sup.phone}</p>
-                                <p className="text-emerald-700 font-bold mt-1 text-[10px]">Wsp: {sup.whatsapp}</p>
+                              <div key={sup.id} className="p-3 bg-slate-50 rounded-lg border border-slate-150 text-xs flex justify-between items-start gap-2">
+                                <div>
+                                  <span className="font-semibold text-slate-950 block">{sup.companyName}</span>
+                                  <p className="text-slate-500">NIT: {sup.nit} | Tel: {sup.phone}</p>
+                                  <p className="text-emerald-700 font-bold mt-1 text-[10px]">Wsp: {sup.whatsapp}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSupplier(sup.id)}
+                                  className="text-slate-400 hover:text-rose-600 p-1 rounded transition cursor-pointer"
+                                  title="Eliminar Proveedor"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -1057,8 +1067,16 @@ export default function InventarioTab() {
                           <h4 className="font-bold text-xs uppercase text-slate-400 tracking-wider mb-2">Lista General de Laboratorios</h4>
                           <div className="flex flex-wrap gap-2.5 max-h-56 overflow-y-auto p-2 border rounded-lg">
                             {laboratories.map(lab => (
-                              <span key={lab} className="px-2.5 py-1 text-xs bg-slate-100 border border-slate-200 rounded text-slate-700 font-semibold">
-                                {lab}
+                              <span key={lab} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs bg-slate-100 border border-slate-200 rounded text-slate-700 font-semibold">
+                                <span>{lab}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLab(lab)}
+                                  className="text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                                  title="Eliminar Laboratorio"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
                               </span>
                             ))}
                           </div>
@@ -1091,8 +1109,16 @@ export default function InventarioTab() {
                           <h4 className="font-bold text-xs uppercase text-slate-400 tracking-wider mb-2">Categorías Médicas</h4>
                           <div className="flex flex-wrap gap-2.5 max-h-56 overflow-y-auto p-2 border rounded-lg">
                             {categories.map(cat => (
-                              <span key={cat} className="px-2.5 py-1 text-xs bg-purple-50 border border-purple-100 rounded text-purple-850 font-semibold font-mono">
-                                {cat}
+                              <span key={cat} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs bg-purple-50 border border-purple-100 rounded text-purple-850 font-semibold font-mono">
+                                <span>{cat}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteCat(cat)}
+                                  className="text-purple-400 hover:text-rose-600 transition cursor-pointer"
+                                  title="Eliminar Categoría"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
                               </span>
                             ))}
                           </div>

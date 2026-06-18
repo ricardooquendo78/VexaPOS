@@ -188,6 +188,23 @@ async function addUser(user: any) {
   saveDb(db);
 }
 
+async function updatePersonalProfile(userId: string, name: string, profileImage: string) {
+  if (mongoDb) {
+    await mongoDb.collection("users").updateOne(
+      { id: userId },
+      { $set: { name, profileImage } }
+    );
+    return;
+  }
+  const db = loadDb();
+  const userIdx = db.users.findIndex((u: any) => u.id === userId);
+  if (userIdx !== -1) {
+    db.users[userIdx].name = name;
+    db.users[userIdx].profileImage = profileImage;
+    saveDb(db);
+  }
+}
+
 async function getBusinessConfig() {
   if (mongoDb) {
     const doc = await mongoDb.collection("config").findOne({ _id: "business_config" as any });
@@ -310,6 +327,42 @@ async function addCategory(categoryName: string) {
   }
 }
 
+async function deleteSupplier(supplierId: string) {
+  if (mongoDb) {
+    await mongoDb.collection("suppliers").deleteOne({ id: supplierId });
+    return;
+  }
+  const db = loadDb();
+  db.suppliers = db.suppliers.filter((s: any) => s.id !== supplierId);
+  saveDb(db);
+}
+
+async function deleteLaboratory(labName: string) {
+  if (mongoDb) {
+    await mongoDb.collection("metadata").updateOne(
+      { _id: "lists" as any },
+      { $pull: { laboratories: labName } as any }
+    );
+    return;
+  }
+  const db = loadDb();
+  db.laboratories = db.laboratories.filter((l: string) => l !== labName);
+  saveDb(db);
+}
+
+async function deleteCategory(categoryName: string) {
+  if (mongoDb) {
+    await mongoDb.collection("metadata").updateOne(
+      { _id: "lists" as any },
+      { $pull: { categories: categoryName } as any }
+    );
+    return;
+  }
+  const db = loadDb();
+  db.categories = db.categories.filter((c: string) => c !== categoryName);
+  saveDb(db);
+}
+
 async function getSales() {
   if (mongoDb) {
     return await mongoDb.collection("sales").find({}).toArray();
@@ -426,6 +479,23 @@ app.post("/api/profile/business", async (req, res) => {
   const business = { name, nit, foundationYear, phone, address, city, logoUrl };
   await updateBusinessConfig(business);
   res.json({ success: true, business });
+});
+
+app.post("/api/profile/personal", async (req, res) => {
+  try {
+    const { userId, name, profileImage } = req.body;
+    console.log("[Droguería Backend] POST /api/profile/personal request received:", { userId, name, profileImageLength: profileImage ? profileImage.length : 0 });
+    if (!userId || !name) {
+      console.warn("[Droguería Backend] Missing fields:", { userId, name });
+      return res.status(400).json({ success: false, message: "Faltan campos obligatorios." });
+    }
+    await updatePersonalProfile(userId, name, profileImage || "");
+    console.log("[Droguería Backend] Personal profile updated successfully for:", userId);
+    res.json({ success: true, name, profileImage });
+  } catch (err: any) {
+    console.error("[Droguería Backend] Error updating personal profile:", err);
+    res.status(500).json({ success: false, message: err.message || "Error interno del servidor." });
+  }
 });
 
 // Inventory endpoint: List all products
@@ -578,6 +648,30 @@ app.post("/api/inventory/manage/categories", async (req, res) => {
   await addCategory(name);
   const updated = await getCategories();
   res.status(201).json({ success: true, categories: updated });
+});
+
+app.delete("/api/inventory/manage/suppliers/:id", async (req, res) => {
+  const { id } = req.params;
+  await deleteSupplier(id);
+  res.json({ success: true });
+});
+
+app.delete("/api/inventory/manage/laboratories", async (req, res) => {
+  const { name } = req.body;
+  if (!name) {
+    return res.status(400).json({ success: false, message: "Nombre de laboratorio requerido." });
+  }
+  await deleteLaboratory(name);
+  res.json({ success: true });
+});
+
+app.delete("/api/inventory/manage/categories", async (req, res) => {
+  const { name } = req.body;
+  if (!name) {
+    return res.status(400).json({ success: false, message: "Nombre de categoría requerido." });
+  }
+  await deleteCategory(name);
+  res.json({ success: true });
 });
 
 // Register POS Sales (facturación)

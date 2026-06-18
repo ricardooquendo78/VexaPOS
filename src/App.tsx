@@ -46,8 +46,14 @@ export default function App() {
   const [syncLogs, setSyncLogs] = useState<string[]>(["Sistema en línea. Listo para procesar."]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
-  // Authentication & session variables
-  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [currentUser, setCurrentUser] = useState<any | null>(() => {
+    try {
+      const savedUser = localStorage.getItem("vexapos_user");
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
   
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [loginEmail, setLoginEmail] = useState("");
@@ -172,8 +178,33 @@ export default function App() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   // Profile configuration states
-  const [profileName, setProfileName] = useState("");
-  const [profileImage, setProfileImage] = useState("");
+  const [profileName, setProfileName] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem("vexapos_user");
+      if (savedUser) {
+        return JSON.parse(savedUser).name || "";
+      }
+    } catch {}
+    return "";
+  });
+  const [profileImage, setProfileImage] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem("vexapos_user");
+      if (savedUser) {
+        return JSON.parse(savedUser).profileImage || "";
+      }
+    } catch {}
+    return "";
+  });
+
+  // Sync user session to localStorage
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem("vexapos_user", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("vexapos_user");
+    }
+  }, [currentUser]);
 
   // Simulate local database preseed on load
   useEffect(() => {
@@ -721,6 +752,52 @@ export default function App() {
     }
   };
 
+  const handleDeleteSupplier = async (id: string) => {
+    if (!confirm("¿Está seguro de eliminar este proveedor?")) return;
+    try {
+      const resp = await fetch(`/api/inventory/manage/suppliers/${id}`, {
+        method: "DELETE"
+      });
+      if (resp.ok) {
+        fetchInitialData();
+      }
+    } catch (e) {
+      alert("Requiere conexión activa");
+    }
+  };
+
+  const handleDeleteLab = async (name: string) => {
+    if (!confirm(`¿Está seguro de eliminar el laboratorio ${name}?`)) return;
+    try {
+      const resp = await fetch("/api/inventory/manage/laboratories", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+      if (resp.ok) {
+        fetchInitialData();
+      }
+    } catch (e) {
+      alert("Requiere conexión activa");
+    }
+  };
+
+  const handleDeleteCat = async (name: string) => {
+    if (!confirm(`¿Está seguro de eliminar la categoría ${name}?`)) return;
+    try {
+      const resp = await fetch("/api/inventory/manage/categories", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+      if (resp.ok) {
+        fetchInitialData();
+      }
+    } catch (e) {
+      alert("Requiere conexión activa");
+    }
+  };
+
   // POS / Facturación Helpers
   const handleAddProductToCart = (p: Product) => {
     const existing = posCart.find(item => item.product.id === p.id);
@@ -1022,15 +1099,40 @@ export default function App() {
     }
   };
 
-  const handleUpdatePersonalProfile = (e: React.FormEvent) => {
+  const handleUpdatePersonalProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (currentUser) {
-      setCurrentUser({
-        ...currentUser,
-        name: profileName,
-        profileImage: profileImage
-      });
-      alert("Perfil personal actualizado localmente.");
+      try {
+        const resp = await fetch("/api/profile/personal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: currentUser.id,
+            name: profileName,
+            profileImage: profileImage
+          })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          setCurrentUser({
+            ...currentUser,
+            name: data.name,
+            profileImage: data.profileImage
+          });
+          alert("¡Perfil personal actualizado!");
+        } else {
+          const errorData = await resp.json().catch(() => ({}));
+          alert("Error al actualizar el perfil: " + (errorData.message || "Error del servidor"));
+        }
+      } catch (err) {
+        // Offline fallback
+        setCurrentUser({
+          ...currentUser,
+          name: profileName,
+          profileImage: profileImage
+        });
+        alert("Perfil personal actualizado localmente (Modo Offline).");
+      }
     }
   };
 
@@ -1093,7 +1195,7 @@ export default function App() {
   const restockProductFactor = restockSelectedProduct?.conversionFactor || 1;
 
   const appState = {
-    isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor
+    isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor, handleDeleteSupplier, handleDeleteLab, handleDeleteCat
   };
 
   return (
