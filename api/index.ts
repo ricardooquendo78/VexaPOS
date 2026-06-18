@@ -40,7 +40,7 @@ interface AppState {
 
 const DEFAULT_STATE: AppState = {
   users: [
-    { id: "1", name: "Administrador Vexa POS", email: "admin@vexapos.com", password: "123", role: "admin", profileImage: "" }
+    { id: "1", name: "Administrador Vexa POS", email: "drogueriagratamira@gmail.com", password: "43518612", role: "admin", profileImage: "" }
   ],
   config: {
     business: {

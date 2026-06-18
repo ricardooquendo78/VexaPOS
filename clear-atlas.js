@@ -40,8 +40,8 @@ async function run() {
     await db.collection("users").insertOne({
       id: "1",
       name: "Administrador Vexa POS",
-      email: "admin@vexapos.com",
-      password: "123",
+      email: "drogueriagratamira@gmail.com",
+      password: "43518612",
       role: "admin",
       profileImage: ""
     });

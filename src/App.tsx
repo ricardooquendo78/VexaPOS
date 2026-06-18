@@ -314,8 +314,8 @@ export default function App() {
       }
     } catch (err) {
       // Offline fallback
-      if (loginEmail === "admin@vexapos.com" && loginPassword === "123") {
-        const fallbackAdmin = { id: "1", name: "Admin (Offline Fallback)", email: "admin@vexapos.com", role: "admin" as const };
+      if (loginEmail === "drogueriagratamira@gmail.com" && loginPassword === "43518612") {
+        const fallbackAdmin = { id: "1", name: "Admin (Offline Fallback)", email: "drogueriagratamira@gmail.com", role: "admin" as const };
         setCurrentUser(fallbackAdmin);
         setProfileName(fallbackAdmin.name);
         setAuthSuccess("Ingreso offline exitoso.");
