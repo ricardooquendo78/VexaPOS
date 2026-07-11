@@ -16,7 +16,7 @@ export default function InventarioTab() {
     const pct = parseFloat(pctStr);
     if (!isNaN(pct) && pct >= 0 && newProdPrice > 0) {
       const calculatedCost = newProdPrice / (1 + pct / 100);
-      setNewProdCost(parseFloat(calculatedCost.toFixed(2)));
+      setNewProdCost(Math.round(calculatedCost));
     }
   };
 
@@ -25,7 +25,7 @@ export default function InventarioTab() {
     const pct = parseFloat(profitPercentage);
     if (!isNaN(pct) && pct >= 0 && priceVal > 0) {
       const calculatedCost = priceVal / (1 + pct / 100);
-      setNewProdCost(parseFloat(calculatedCost.toFixed(2)));
+      setNewProdCost(Math.round(calculatedCost));
     }
   };
 
