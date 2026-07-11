@@ -498,7 +498,10 @@ export default function App() {
     setNewProdBarcode("");
     setNewProdFoto("");
     setNewProdSellMode("ambas");
-    setInventoryFormMode("none");
+    // Scroll smoothly to top of the page to register another product immediately
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   // Add Supplier Form

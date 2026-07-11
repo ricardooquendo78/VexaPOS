@@ -42,6 +42,12 @@ export default function InventarioTab() {
     return dateStr;
   };
 
+  React.useEffect(() => {
+    if (newProdName === "") {
+      setProfitPercentage("");
+    }
+  }, [newProdName]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
