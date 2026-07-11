@@ -229,7 +229,7 @@ export default function InventarioTab() {
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha de Vencimiento</label>
                         <input
-                          type="date"
+                          type="month"
                           value={newProdExp}
                           onChange={(e) => setNewProdExp(e.target.value)}
                           className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
@@ -331,7 +331,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdCost}
+                              value={newProdCost || ""}
                               onChange={(e) => handleCostChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
                             />
@@ -342,7 +342,7 @@ export default function InventarioTab() {
                               type="number"
                               min="0"
                               placeholder="Ej: 30"
-                              value={profitPercentage}
+                              value={profitPercentage || ""}
                               onChange={(e) => handlePercentageChange(e.target.value)}
                               className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
@@ -352,7 +352,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdPrice}
+                              value={newProdPrice || ""}
                               onChange={(e) => handlePriceChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
@@ -362,7 +362,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdSkins}
+                              value={newProdSkins || ""}
                               onChange={(e) => setNewProdSkins(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
@@ -377,7 +377,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdCost}
+                              value={newProdCost || ""}
                               onChange={(e) => handleCostChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
                             />
@@ -388,7 +388,7 @@ export default function InventarioTab() {
                               type="number"
                               min="0"
                               placeholder="Ej: 30"
-                              value={profitPercentage}
+                              value={profitPercentage || ""}
                               onChange={(e) => handlePercentageChange(e.target.value)}
                               className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
@@ -398,7 +398,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdPrice}
+                              value={newProdPrice || ""}
                               onChange={(e) => handlePriceChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
@@ -408,7 +408,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdSkins}
+                              value={newProdSkins || ""}
                               onChange={(e) => setNewProdSkins(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
@@ -423,7 +423,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdCost}
+                              value={newProdCost || ""}
                               onChange={(e) => handleCostChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
                             />
@@ -434,7 +434,7 @@ export default function InventarioTab() {
                               type="number"
                               min="0"
                               placeholder="Ej: 30"
-                              value={profitPercentage}
+                              value={profitPercentage || ""}
                               onChange={(e) => handlePercentageChange(e.target.value)}
                               className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
@@ -444,7 +444,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdPrice}
+                              value={newProdPrice || ""}
                               onChange={(e) => handlePriceChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
@@ -454,7 +454,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdPriceUnits}
+                              value={newProdPriceUnits || ""}
                               onChange={(e) => setNewProdPriceUnits(Number(e.target.value))}
                               placeholder="Ej: 500"
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
@@ -465,7 +465,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="1"
-                              value={newProdFactor}
+                              value={newProdFactor || ""}
                               onChange={(e) => {
                                 const newFactor = Math.max(1, Number(e.target.value));
                                 setNewProdFactor(newFactor);
@@ -481,7 +481,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
-                              value={newProdSkins}
+                              value={newProdSkins || ""}
                               onChange={(e) => {
                                 const newSkins = Math.max(0, Number(e.target.value));
                                 setNewProdSkins(newSkins);
@@ -499,7 +499,7 @@ export default function InventarioTab() {
                               <input
                                 type="number"
                                 min="0"
-                                value={newProdUnits}
+                                value={newProdUnits || ""}
                                 onChange={(e) => {
                                   const newUnits = Math.max(0, Number(e.target.value));
                                   setNewProdUnits(newUnits);
@@ -522,7 +522,7 @@ export default function InventarioTab() {
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Umbral Stock Mínimo (Pastillas eq)</label>
                         <input
                           type="number"
-                          value={newProdMinAlert}
+                          value={newProdMinAlert || ""}
                           onChange={(e) => setNewProdMinAlert(Number(e.target.value))}
                           className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
                         />
@@ -760,7 +760,7 @@ export default function InventarioTab() {
                                   type="number"
                                   required
                                   min="1"
-                                  value={restockTotalUnits}
+                                  value={restockTotalUnits || ""}
                                   onChange={(e) => {
                                     const val = Math.max(1, Number(e.target.value));
                                     setRestockTotalUnits(val);
@@ -779,7 +779,7 @@ export default function InventarioTab() {
                                   type="number"
                                   required
                                   min="1"
-                                  value={restockSkins}
+                                  value={restockSkins || ""}
                                   onChange={(e) => {
                                     const val = Math.max(1, Number(e.target.value));
                                     setRestockSkins(val);
@@ -797,7 +797,7 @@ export default function InventarioTab() {
                                 type="number"
                                 required
                                 min="0"
-                                value={restockCost}
+                                value={restockCost || ""}
                                 onChange={(e) => setRestockCost(Number(e.target.value))}
                                 className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold"
                               />
@@ -812,7 +812,7 @@ export default function InventarioTab() {
                                 type="number"
                                 required
                                 min="0"
-                                value={restockPrice}
+                                value={restockPrice || ""}
                                 onChange={(e) => setRestockPrice(Number(e.target.value))}
                                 className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-teal-700"
                               />
@@ -826,7 +826,7 @@ export default function InventarioTab() {
                                   type="number"
                                   required
                                   min="0"
-                                  value={restockPriceUnits}
+                                  value={restockPriceUnits || ""}
                                   onChange={(e) => setRestockPriceUnits(Number(e.target.value))}
                                   className="w-full px-3 py-1.5 border border-emerald-300 bg-white rounded-md text-xs font-bold text-emerald-700"
                                 />
@@ -837,7 +837,7 @@ export default function InventarioTab() {
                             <div className={restockSelectedProduct.conversionFactor > 1 ? "md:col-span-1" : "md:col-span-2"}>
                               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Vencimiento *</label>
                               <input
-                                type="date"
+                                type="month"
                                 required
                                 value={restockExp}
                                 onChange={(e) => setRestockExp(e.target.value)}
