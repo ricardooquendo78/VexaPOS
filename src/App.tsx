@@ -206,10 +206,18 @@ export default function App() {
     }
   }, [currentUser]);
 
-  // Simulate local database preseed on load
+  // Simulate local database preseed on load and poll every 30 seconds
   useEffect(() => {
     fetchInitialData();
-  }, []);
+
+    const interval = setInterval(() => {
+      if (!isOffline && document.visibilityState === "visible") {
+        fetchInitialData();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isOffline]);
 
   // Synchronize browser tab title and favicon with the business name & brand favicon
   useEffect(() => {

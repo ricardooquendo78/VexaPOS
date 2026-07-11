@@ -18,3 +18,6 @@ View your app in AI Studio: https://ai.studio/apps/af570961-af2d-4827-8fcf-dc775
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+
+pestaña de analisis conteo de clientes atendidos diarios y porductos estrella y bajos

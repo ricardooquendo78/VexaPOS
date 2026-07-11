@@ -9,6 +9,30 @@ export default function InventarioTab() {
 
   const [showBarcodeScannerForNewProduct, setShowBarcodeScannerForNewProduct] = React.useState(false);
   const [showBarcodeScannerForRestock, setShowBarcodeScannerForRestock] = React.useState(false);
+  const [profitPercentage, setProfitPercentage] = React.useState<string>("");
+
+  const handlePercentageChange = (pctStr: string) => {
+    setProfitPercentage(pctStr);
+    const pct = parseFloat(pctStr);
+    if (!isNaN(pct) && pct >= 0 && newProdPrice > 0) {
+      const calculatedCost = newProdPrice / (1 + pct / 100);
+      setNewProdCost(parseFloat(calculatedCost.toFixed(2)));
+    }
+  };
+
+  const handlePriceChange = (priceVal: number) => {
+    setNewProdPrice(priceVal);
+    const pct = parseFloat(profitPercentage);
+    if (!isNaN(pct) && pct >= 0 && priceVal > 0) {
+      const calculatedCost = priceVal / (1 + pct / 100);
+      setNewProdCost(parseFloat(calculatedCost.toFixed(2)));
+    }
+  };
+
+  const handleCostChange = (costVal: number) => {
+    setNewProdCost(costVal);
+    setProfitPercentage("");
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -308,8 +332,19 @@ export default function InventarioTab() {
                               type="number"
                               min="0"
                               value={newProdCost}
-                              onChange={(e) => setNewProdCost(Number(e.target.value))}
+                              onChange={(e) => handleCostChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia (Ayuda Costo)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="Ej: 30"
+                              value={profitPercentage}
+                              onChange={(e) => handlePercentageChange(e.target.value)}
+                              className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
                           </div>
                           <div>
@@ -318,7 +353,7 @@ export default function InventarioTab() {
                               type="number"
                               min="0"
                               value={newProdPrice}
-                              onChange={(e) => setNewProdPrice(Number(e.target.value))}
+                              onChange={(e) => handlePriceChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
                           </div>
@@ -343,8 +378,19 @@ export default function InventarioTab() {
                               type="number"
                               min="0"
                               value={newProdCost}
-                              onChange={(e) => setNewProdCost(Number(e.target.value))}
+                              onChange={(e) => handleCostChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia (Ayuda Costo)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="Ej: 30"
+                              value={profitPercentage}
+                              onChange={(e) => handlePercentageChange(e.target.value)}
+                              className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
                           </div>
                           <div>
@@ -353,7 +399,7 @@ export default function InventarioTab() {
                               type="number"
                               min="0"
                               value={newProdPrice}
-                              onChange={(e) => setNewProdPrice(Number(e.target.value))}
+                              onChange={(e) => handlePriceChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
                           </div>
@@ -378,8 +424,19 @@ export default function InventarioTab() {
                               type="number"
                               min="0"
                               value={newProdCost}
-                              onChange={(e) => setNewProdCost(Number(e.target.value))}
+                              onChange={(e) => handleCostChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia (Ayuda Costo)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="Ej: 30"
+                              value={profitPercentage}
+                              onChange={(e) => handlePercentageChange(e.target.value)}
+                              className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
                           </div>
                           <div>
@@ -388,7 +445,7 @@ export default function InventarioTab() {
                               type="number"
                               min="0"
                               value={newProdPrice}
-                              onChange={(e) => setNewProdPrice(Number(e.target.value))}
+                              onChange={(e) => handlePriceChange(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
                           </div>

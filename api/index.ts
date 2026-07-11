@@ -380,25 +380,37 @@ async function addSale(sale: any) {
   saveDb(db);
 }
 
+function computeFinalCash(closure: any) {
+  if (!closure) return closure;
+  const initialCash = closure.initialCash !== undefined ? closure.initialCash : 100000;
+  const totalSalesRevenue = closure.totalSalesRevenue || 0;
+  const totalExpenses = closure.totalExpenses || 0;
+  closure.finalCash = initialCash + totalSalesRevenue - totalExpenses;
+  return closure;
+}
+
 async function getClosures() {
   if (mongoDb) {
-    return await mongoDb.collection("closures").find({}).toArray();
+    const docs = await mongoDb.collection("closures").find({}).toArray();
+    return docs.map(computeFinalCash);
   }
-  return loadDb().closures;
+  return loadDb().closures.map(computeFinalCash);
 }
 
 async function getClosure(date: string) {
   if (mongoDb) {
-    return await mongoDb.collection("closures").findOne({ date, isClosed: false });
+    const doc = await mongoDb.collection("closures").findOne({ date, isClosed: false });
+    return computeFinalCash(doc);
   }
-  return loadDb().closures.find(c => c.date === date && !c.isClosed);
+  return computeFinalCash(loadDb().closures.find(c => c.date === date && !c.isClosed));
 }
 
 async function getClosedToday(date: string) {
   if (mongoDb) {
-    return await mongoDb.collection("closures").findOne({ date, isClosed: true });
+    const doc = await mongoDb.collection("closures").findOne({ date, isClosed: true });
+    return computeFinalCash(doc);
   }
-  return loadDb().closures.find(c => c.date === date && c.isClosed);
+  return computeFinalCash(loadDb().closures.find(c => c.date === date && c.isClosed));
 }
 
 async function saveClosure(closure: any) {
@@ -417,6 +429,184 @@ async function saveClosure(closure: any) {
     db.closures.push(closure);
   } else {
     db.closures[idx] = closure;
+  }
+  saveDb(db);
+}
+
+async function getNextInvoiceNumber(): Promise<string> {
+  if (mongoDb) {
+    const res = await mongoDb.collection("counters").findOneAndUpdate(
+      { _id: "invoiceNumber" as any },
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: "after" }
+    );
+    const seq = res && typeof res.seq === "number" ? res.seq : 1;
+    return "FC-" + String(seq).padStart(5, "0");
+  }
+  const db = loadDb();
+  const nextSeq = db.sales.length + 1;
+  return "FC-" + String(nextSeq).padStart(5, "0");
+}
+
+async function adjustProductStock(productId: string, skinChange: number, unitChange: number, overrideFields?: { cost?: number, price?: number, priceUnits?: number, expirationDate?: string }): Promise<boolean> {
+  const maxRetries = 10;
+  for (let i = 0; i < maxRetries; i++) {
+    let currentSkins = 0;
+    let currentUnits = 0;
+    let conversionFactor = 1;
+
+    if (mongoDb) {
+      const prod = await mongoDb.collection("products").findOne({ id: productId });
+      if (!prod) return false;
+      currentSkins = prod.quantityOnSkins || 0;
+      currentUnits = prod.quantityUnits || 0;
+      conversionFactor = prod.conversionFactor || 1;
+    } else {
+      const db = loadDb();
+      const prod = db.products.find(p => p.id === productId);
+      if (!prod) return false;
+      currentSkins = prod.quantityOnSkins || 0;
+      currentUnits = prod.quantityUnits || 0;
+      conversionFactor = prod.conversionFactor || 1;
+    }
+
+    const totalUnitsInStock = (currentSkins * conversionFactor) + currentUnits;
+    const totalUnitsChange = (skinChange * conversionFactor) + unitChange;
+    const remainingTotalUnits = Math.max(0, totalUnitsInStock + totalUnitsChange);
+
+    let newSkins = 0;
+    let newUnits = 0;
+    if (conversionFactor > 1) {
+      newSkins = Math.floor(remainingTotalUnits / conversionFactor);
+      newUnits = remainingTotalUnits % conversionFactor;
+    } else {
+      newSkins = remainingTotalUnits;
+      newUnits = 0;
+    }
+
+    const updatedFields: any = {
+      quantityOnSkins: newSkins,
+      quantityUnits: newUnits
+    };
+
+    if (overrideFields) {
+      if (overrideFields.cost !== undefined) updatedFields.cost = overrideFields.cost;
+      if (overrideFields.price !== undefined) updatedFields.price = overrideFields.price;
+      if (overrideFields.priceUnits !== undefined) updatedFields.priceUnits = overrideFields.priceUnits;
+      if (overrideFields.expirationDate !== undefined) updatedFields.expirationDate = overrideFields.expirationDate;
+    }
+
+    if (mongoDb) {
+      const res = await mongoDb.collection("products").updateOne(
+        { id: productId, quantityOnSkins: currentSkins, quantityUnits: currentUnits },
+        { $set: updatedFields }
+      );
+      if (res.modifiedCount > 0) {
+        return true;
+      }
+      // Concurrent update collision: wait and retry with random jitter
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 80 + 20));
+    } else {
+      const db = loadDb();
+      const idx = db.products.findIndex(p => p.id === productId);
+      if (idx !== -1) {
+        db.products[idx] = { ...db.products[idx], ...updatedFields };
+        saveDb(db);
+      }
+      return true;
+    }
+  }
+  throw new Error(`Failed to adjust stock for product ${productId} after ${maxRetries} retries due to concurrent updates.`);
+}
+
+async function deductProductStock(productId: string, deductSkins: number, deductUnits: number): Promise<boolean> {
+  return adjustProductStock(productId, -deductSkins, -deductUnits);
+}
+
+async function incrementClosureTotals(date: string, totalRevenue: number, salesCountIncrement = 1) {
+  if (mongoDb) {
+    await mongoDb.collection("closures").updateOne(
+      { id: "close-" + date },
+      {
+        $inc: {
+          totalSalesCount: salesCountIncrement,
+          totalSalesRevenue: totalRevenue
+        },
+        $setOnInsert: {
+          date: date,
+          totalExpenses: 0,
+          initialCash: 100000,
+          expenses: [],
+          isClosed: false
+        }
+      },
+      { upsert: true }
+    );
+    return;
+  }
+  const db = loadDb();
+  let closure = db.closures.find(c => c.date === date && !c.isClosed);
+  if (!closure) {
+    closure = {
+      id: "close-" + date,
+      date: date,
+      totalSalesCount: salesCountIncrement,
+      totalSalesRevenue: totalRevenue,
+      totalExpenses: 0,
+      initialCash: 100000,
+      finalCash: 100000 + totalRevenue,
+      expenses: [],
+      isClosed: false
+    };
+    db.closures.push(closure);
+  } else {
+    closure.totalSalesCount += salesCountIncrement;
+    closure.totalSalesRevenue += totalRevenue;
+    closure.finalCash += totalRevenue;
+  }
+  saveDb(db);
+}
+
+async function addExpenseToClosure(date: string, expense: any) {
+  if (mongoDb) {
+    await mongoDb.collection("closures").updateOne(
+      { id: "close-" + date },
+      {
+        $push: { expenses: expense } as any,
+        $inc: {
+          totalExpenses: expense.amount
+        },
+        $setOnInsert: {
+          date: date,
+          totalSalesCount: 0,
+          totalSalesRevenue: 0,
+          initialCash: 100000,
+          isClosed: false
+        }
+      },
+      { upsert: true }
+    );
+    return;
+  }
+  const db = loadDb();
+  let closure = db.closures.find(c => c.date === date && !c.isClosed);
+  if (!closure) {
+    closure = {
+      id: "close-" + date,
+      date: date,
+      totalSalesCount: 0,
+      totalSalesRevenue: 0,
+      totalExpenses: expense.amount,
+      initialCash: 100000,
+      finalCash: 100000 - expense.amount,
+      expenses: [expense],
+      isClosed: false
+    };
+    db.closures.push(closure);
+  } else {
+    closure.expenses.push(expense);
+    closure.totalExpenses += expense.amount;
+    closure.finalCash -= expense.amount;
   }
   saveDb(db);
 }
@@ -682,38 +872,16 @@ app.post("/api/sales", async (req, res) => {
     return res.status(400).json({ success: false, message: "No hay productos en la factura." });
   }
 
-  const productsList = await getProducts();
-
   // Process product stock reduction
   for (const item of items) {
-    const prod = productsList.find(p => p.id === item.productId);
-    if (prod) {
-      let deductSkins = item.quantitySkins || 0;
-      let deductUnits = item.quantityUnits || 0;
-
-      const totalUnitsInStock = (prod.quantityOnSkins * prod.conversionFactor) + prod.quantityUnits;
-      const totalUnitsToDeduct = (deductSkins * prod.conversionFactor) + deductUnits;
-
-      if (totalUnitsInStock < totalUnitsToDeduct) {
-        console.warn(`Inventario negativo detectado para ${prod.name}`);
-      }
-
-      const remainingTotalUnits = Math.max(0, totalUnitsInStock - totalUnitsToDeduct);
-      
-      if (prod.conversionFactor > 1) {
-        prod.quantityOnSkins = Math.floor(remainingTotalUnits / prod.conversionFactor);
-        prod.quantityUnits = remainingTotalUnits % prod.conversionFactor;
-      } else {
-        prod.quantityOnSkins = remainingTotalUnits;
-        prod.quantityUnits = 0;
-      }
-      
-      await updateProduct(prod.id, prod);
+    try {
+      await deductProductStock(item.productId, item.quantitySkins || 0, item.quantityUnits || 0);
+    } catch (err) {
+      console.error(`Error deconcurrente al deducir inventario para el producto ${item.productId}:`, err);
     }
   }
 
-  const salesList = await getSales();
-  const nextInvoiceNo = "FC-" + String(salesList.length + 1).padStart(5, "0");
+  const nextInvoiceNo = await getNextInvoiceNumber();
   const newInvoice = {
     id: "sale-" + Date.now(),
     invoiceNumber: nextInvoiceNo,
@@ -729,26 +897,8 @@ app.post("/api/sales", async (req, res) => {
 
   // Daily cash balance increment
   const todayStr = new Date().toISOString().split("T")[0];
-  let closure = await getClosure(todayStr);
-  if (!closure) {
-    closure = {
-      id: "close-" + todayStr,
-      date: todayStr,
-      totalSalesCount: 1,
-      totalSalesRevenue: total,
-      totalExpenses: 0,
-      initialCash: 100000,
-      finalCash: 100000 + total,
-      expenses: [],
-      isClosed: false
-    };
-  } else {
-    closure.totalSalesCount += 1;
-    closure.totalSalesRevenue += total;
-    closure.finalCash += total;
-  }
+  await incrementClosureTotals(todayStr, total, 1);
 
-  await saveClosure(closure);
   res.status(201).json({ success: true, invoice: newInvoice });
 });
 
@@ -789,28 +939,11 @@ app.post("/api/closure/expense", async (req, res) => {
     return res.status(400).json({ success: false, message: "Descripción y valor obligatorios." });
   }
 
-  let closure = await getClosure(todayStr);
   const expObj = { id: "exp-" + Date.now(), description, amount: Number(amount), timestamp: new Date().toISOString() };
-  if (!closure) {
-    closure = {
-      id: "close-" + todayStr,
-      date: todayStr,
-      totalSalesCount: 0,
-      totalSalesRevenue: 0,
-      totalExpenses: Number(amount),
-      initialCash: 100000,
-      finalCash: 100000 - Number(amount),
-      expenses: [expObj],
-      isClosed: false
-    };
-  } else {
-    closure.expenses.push(expObj);
-    closure.totalExpenses += Number(amount);
-    closure.finalCash -= Number(amount);
-  }
+  await addExpenseToClosure(todayStr, expObj);
 
-  await saveClosure(closure);
-  res.json({ success: true, closure });
+  const updatedClosure = await getClosure(todayStr);
+  res.json({ success: true, closure: updatedClosure });
 });
 
 app.post("/api/closure/close", async (req, res) => {
@@ -843,56 +976,26 @@ app.post("/api/sync", async (req, res) => {
   }
 
   const productsList = await getProducts();
-  const salesList = await getSales();
 
   for (const action of clientActions) {
     const { type, entity, data, timestamp } = action;
     
     if (entity === "expense") {
       const todayStr = new Date(timestamp).toISOString().split("T")[0];
-      let closure = await getClosure(todayStr);
       const expObj = { id: data.id || "exp-" + Date.now(), description: data.description, amount: Number(data.amount), timestamp };
-      
-      if (!closure) {
-        closure = {
-          id: "close-" + todayStr,
-          date: todayStr,
-          totalSalesCount: 0,
-          totalSalesRevenue: 0,
-          totalExpenses: Number(data.amount),
-          initialCash: 100000,
-          finalCash: 100000 - Number(data.amount),
-          expenses: [expObj],
-          isClosed: false
-        };
-      } else {
-        closure.expenses.push(expObj);
-        closure.totalExpenses += Number(data.amount);
-        closure.finalCash -= Number(data.amount);
-      }
-      await saveClosure(closure);
+      await addExpenseToClosure(todayStr, expObj);
       logs.push(`Gasto sincronizado exitosamente: "${data.description}" por $${data.amount}`);
     }
     else if (entity === "sale") {
       for (const item of data.items) {
-        const prod = productsList.find(p => p.id === item.productId);
-        if (prod) {
-          const totalUnitsInStock = (prod.quantityOnSkins * prod.conversionFactor) + prod.quantityUnits;
-          const totalUnitsToDeduct = ((item.quantitySkins || 0) * prod.conversionFactor) + (item.quantityUnits || 0);
-          const remainingTotalUnits = Math.max(0, totalUnitsInStock - totalUnitsToDeduct);
-          
-          if (prod.conversionFactor > 1) {
-            prod.quantityOnSkins = Math.floor(remainingTotalUnits / prod.conversionFactor);
-            prod.quantityUnits = remainingTotalUnits % prod.conversionFactor;
-          } else {
-            prod.quantityOnSkins = remainingTotalUnits;
-            prod.quantityUnits = 0;
-          }
-          await updateProduct(prod.id, prod);
+        try {
+          await deductProductStock(item.productId, item.quantitySkins || 0, item.quantityUnits || 0);
+        } catch (err) {
+          console.error(`Error deconcurrente al deducir inventario offline para el producto ${item.productId}:`, err);
         }
       }
 
-      const invoiceNo = data.invoiceNumber || ("FC-" + String(salesList.length + 1).padStart(5, "0"));
+      const invoiceNo = data.invoiceNumber || (await getNextInvoiceNumber());
       const newSale = {
         id: data.id || "sale-" + Date.now(),
         invoiceNumber: invoiceNo,
@@ -906,25 +1009,7 @@ app.post("/api/sync", async (req, res) => {
       await addSale(newSale);
 
       const todayStr = new Date(timestamp).toISOString().split("T")[0];
-      let closure = await getClosure(todayStr);
-      if (!closure) {
-        closure = {
-          id: "close-" + todayStr,
-          date: todayStr,
-          totalSalesCount: 1,
-          totalSalesRevenue: data.total,
-          totalExpenses: 0,
-          initialCash: 100000,
-          finalCash: 100000 + data.total,
-          expenses: [],
-          isClosed: false
-        };
-      } else {
-        closure.totalSalesCount += 1;
-        closure.totalSalesRevenue += data.total;
-        closure.finalCash += data.total;
-      }
-      await saveClosure(closure);
+      await incrementClosureTotals(todayStr, data.total, 1);
       logs.push(`Factura ${invoiceNo} por $${data.total} sincronizada correctamente.`);
     }
     else if (entity === "product") {
@@ -956,22 +1041,24 @@ app.post("/api/sync", async (req, res) => {
       const itemsToProcess = Array.isArray(data.items) ? data.items : [data];
       let restockedCount = 0;
       for (const item of itemsToProcess) {
-        const p = productsList.find(prod => prod.id === item.productId);
-        if (p) {
-          p.quantityOnSkins += Number(item.quantitySkins) || 0;
-          p.quantityUnits += Number(item.quantityUnits) || 0;
-          if (item.cost) p.cost = Number(item.cost);
-          if (item.price) p.price = Number(item.price);
-          if (item.priceUnits) p.priceUnits = Number(item.priceUnits);
-          if (item.expirationDate) p.expirationDate = item.expirationDate;
+        try {
+          const overrideFields: any = {};
+          if (item.cost !== undefined) overrideFields.cost = Number(item.cost);
+          if (item.price !== undefined) overrideFields.price = Number(item.price);
+          if (item.priceUnits !== undefined) overrideFields.priceUnits = Number(item.priceUnits);
+          if (item.expirationDate !== undefined) overrideFields.expirationDate = item.expirationDate;
 
-          if (p.quantityUnits >= p.conversionFactor && p.conversionFactor > 1) {
-            const additionalSkins = Math.floor(p.quantityUnits / p.conversionFactor);
-            p.quantityOnSkins += additionalSkins;
-            p.quantityUnits = p.quantityUnits % p.conversionFactor;
+          const success = await adjustProductStock(
+            item.productId,
+            Number(item.quantitySkins) || 0,
+            Number(item.quantityUnits) || 0,
+            overrideFields
+          );
+          if (success) {
+            restockedCount++;
           }
-          await updateProduct(p.id, p);
-          restockedCount++;
+        } catch (err) {
+          console.error(`Error deconcurrente al cargar inventario offline para el producto ${item.productId}:`, err);
         }
       }
       logs.push(`Servidor: Se sincronizó cargue de inventario offline (${restockedCount} productos procesados).`);
