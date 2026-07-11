@@ -835,10 +835,9 @@ export default function InventarioTab() {
 
                             {/* EXPIRACIÓN NUEVA */}
                             <div className={restockSelectedProduct.conversionFactor > 1 ? "md:col-span-1" : "md:col-span-2"}>
-                              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Vencimiento *</label>
+                              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Vencimiento</label>
                               <input
                                 type="month"
-                                required
                                 value={restockExp}
                                 onChange={(e) => setRestockExp(e.target.value)}
                                 className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs"
