@@ -34,6 +34,14 @@ export default function InventarioTab() {
     setProfitPercentage("");
   };
 
+  const formatToMonth = (dateStr: string) => {
+    if (!dateStr) return "";
+    if (dateStr.length >= 7) {
+      return dateStr.substring(0, 7);
+    }
+    return dateStr;
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -230,8 +238,8 @@ export default function InventarioTab() {
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha de Vencimiento</label>
                         <input
                           type="month"
-                          value={newProdExp}
-                          onChange={(e) => setNewProdExp(e.target.value)}
+                          value={formatToMonth(newProdExp)}
+                          onChange={(e) => setNewProdExp(e.target.value || "")}
                           className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
                         />
                       </div>
@@ -838,8 +846,8 @@ export default function InventarioTab() {
                               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Vencimiento</label>
                               <input
                                 type="month"
-                                value={restockExp}
-                                onChange={(e) => setRestockExp(e.target.value)}
+                                value={formatToMonth(restockExp)}
+                                onChange={(e) => setRestockExp(e.target.value || "")}
                                 className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs"
                               />
                             </div>
@@ -1262,14 +1270,18 @@ export default function InventarioTab() {
                           filteredProducts.map(p => {
                             const totalUnits = (p.quantityOnSkins * p.conversionFactor) + p.quantityUnits;
                             const isLowStock = totalUnits <= p.minStockAlert;
-                            const dateExpiry = new Date(p.expirationDate);
-                            const monthsToExpiry = (dateExpiry.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30);
+                            const dateExpiry = p.expirationDate ? new Date(p.expirationDate) : null;
+                            const monthsToExpiry = dateExpiry && !isNaN(dateExpiry.getTime())
+                              ? (dateExpiry.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30)
+                              : NaN;
                             
                             let expiryBadge = "bg-emerald-50 text-emerald-800 border-emerald-100";
-                            if (monthsToExpiry <= 3) {
-                              expiryBadge = "bg-rose-100 text-rose-800 border-rose-200 animate-pulse font-bold";
-                            } else if (monthsToExpiry <= 6) {
-                              expiryBadge = "bg-amber-100 text-amber-800 border-amber-200";
+                            if (!isNaN(monthsToExpiry)) {
+                              if (monthsToExpiry <= 3) {
+                                expiryBadge = "bg-rose-100 text-rose-800 border-rose-200 animate-pulse font-bold";
+                              } else if (monthsToExpiry <= 6) {
+                                expiryBadge = "bg-amber-100 text-amber-800 border-amber-200";
+                              }
                             }
 
                             return (
@@ -1316,7 +1328,7 @@ export default function InventarioTab() {
                                 </td>
                                 <td className="p-3">
                                   <span className={`px-2.5 py-0.5 rounded-md border text-[10px] ${expiryBadge}`}>
-                                    {p.expirationDate}
+                                    {p.expirationDate || "Sin fecha"}
                                   </span>
                                 </td>
                               </tr>
