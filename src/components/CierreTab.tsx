@@ -6,6 +6,42 @@ import TechAdvisory from './TechAdvisory';
 export default function CierreTab() {
   const { isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor } = useAppContext();
 
+  const [historySubTab, setHistorySubTab] = React.useState<"daily" | "monthly">("daily");
+
+  const formatMonthName = (monthKey: string) => {
+    const [year, month] = monthKey.split("-");
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+    const idx = parseInt(month, 10) - 1;
+    return `${monthNames[idx] || month} ${year}`;
+  };
+
+  const getMonthlySummaries = () => {
+    const groups: { [key: string]: { month: string; salesRevenue: number; expenses: number; netCash: number; dayCount: number } } = {};
+    
+    closures.forEach(cl => {
+      if (!cl.date) return;
+      const monthKey = cl.date.substring(0, 7); // "YYYY-MM"
+      if (!groups[monthKey]) {
+        groups[monthKey] = {
+          month: monthKey,
+          salesRevenue: 0,
+          expenses: 0,
+          netCash: 0,
+          dayCount: 0
+        };
+      }
+      groups[monthKey].salesRevenue += cl.totalSalesRevenue || 0;
+      groups[monthKey].expenses += cl.totalExpenses || 0;
+      groups[monthKey].netCash += (cl.totalSalesRevenue || 0) - (cl.totalExpenses || 0);
+      groups[monthKey].dayCount += 1;
+    });
+    
+    return Object.values(groups).sort((a, b) => b.month.localeCompare(a.month));
+  };
+
   return (
     <>
       {/* TAB CONTENT: CIERRE */}
@@ -159,44 +195,102 @@ export default function CierreTab() {
                           La siguiente tabla almacena las trazas financieras concluidas e indexadas. Estos cierres evitan la alteración diurna de deudas a proveedores.
                         </p>
 
-                        <div className="border rounded-lg overflow-hidden">
-                          <table className="w-full text-left text-xs border-collapse">
-                            <thead className="bg-slate-50 border-b font-bold text-slate-500 uppercase tracking-wider text-[9px]">
-                              <tr>
-                                <th className="p-2.5">Fecha Cierre</th>
-                                <th className="p-2.5">Ventas Registradas</th>
-                                <th className="p-2.5">Gastos Deducidos</th>
-                                <th className="p-2.5">Fondo Inicial</th>
-                                <th className="p-2.5">Arqueo Neto</th>
-                                <th className="p-2.5">Estado</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y font-mono text-[10.5px]">
-                              {closures.length === 0 ? (
-                                <tr>
-                                  <td colSpan={6} className="p-4 text-center text-slate-400">Sin historial en base local</td>
-                                </tr>
-                              ) : (
-                                closures.map((cl) => (
-                                  <tr key={cl.id} className="hover:bg-slate-50 font-medium">
-                                    <td className="p-2.5 font-bold text-slate-900">{cl.date}</td>
-                                    <td className="p-2.5 text-emerald-700">+${cl.totalSalesRevenue.toLocaleString()}</td>
-                                    <td className="p-2.5 text-rose-700">-${cl.totalExpenses.toLocaleString()}</td>
-                                    <td className="p-2.5 text-slate-500">${cl.initialCash.toLocaleString()}</td>
-                                    <td className="p-2.5 text-slate-900 font-bold">${cl.finalCash.toLocaleString()}</td>
-                                    <td className="p-2.5">
-                                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                                        cl.isClosed ? 'bg-slate-100 text-slate-700 border' : 'bg-amber-50 text-amber-800 border'
-                                      }`}>
-                                        {cl.isClosed ? 'Consolidado' : 'Abierto'}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
+                        <div className="flex gap-2 border-b pb-2 mb-4">
+                          <button
+                            type="button"
+                            onClick={() => setHistorySubTab("daily")}
+                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                              historySubTab === "daily"
+                                ? "bg-slate-900 text-white shadow-sm"
+                                : "text-slate-650 hover:bg-slate-100"
+                            }`}
+                          >
+                            Cierres Diarios
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setHistorySubTab("monthly")}
+                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                              historySubTab === "monthly"
+                                ? "bg-slate-900 text-white shadow-sm"
+                                : "text-slate-650 hover:bg-slate-100"
+                            }`}
+                          >
+                            Resumen Mensual
+                          </button>
                         </div>
+
+                        {historySubTab === "daily" ? (
+                          <div className="border rounded-lg overflow-hidden">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead className="bg-slate-50 border-b font-bold text-slate-500 uppercase tracking-wider text-[9px]">
+                                <tr>
+                                  <th className="p-2.5">Fecha Cierre</th>
+                                  <th className="p-2.5">Ventas Registradas</th>
+                                  <th className="p-2.5">Gastos Deducidos</th>
+                                  <th className="p-2.5">Fondo Inicial</th>
+                                  <th className="p-2.5">Arqueo Neto</th>
+                                  <th className="p-2.5">Estado</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y font-mono text-[10.5px]">
+                                {closures.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={6} className="p-4 text-center text-slate-400">Sin historial en base local</td>
+                                  </tr>
+                                ) : (
+                                  closures.map((cl) => (
+                                    <tr key={cl.id} className="hover:bg-slate-50 font-medium">
+                                      <td className="p-2.5 font-bold text-slate-900">{cl.date}</td>
+                                      <td className="p-2.5 text-emerald-700">+${cl.totalSalesRevenue.toLocaleString()}</td>
+                                      <td className="p-2.5 text-rose-700">-${cl.totalExpenses.toLocaleString()}</td>
+                                      <td className="p-2.5 text-slate-500">${cl.initialCash.toLocaleString()}</td>
+                                      <td className="p-2.5 text-slate-900 font-bold">${cl.finalCash.toLocaleString()}</td>
+                                      <td className="p-2.5">
+                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                          cl.isClosed ? 'bg-slate-100 text-slate-700 border' : 'bg-amber-50 text-amber-800 border'
+                                        }`}>
+                                          {cl.isClosed ? 'Consolidado' : 'Abierto'}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="border rounded-lg overflow-hidden">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead className="bg-slate-50 border-b font-bold text-slate-500 uppercase tracking-wider text-[9px]">
+                                <tr>
+                                  <th className="p-2.5">Mes / Año</th>
+                                  <th className="p-2.5">Días Consolidados</th>
+                                  <th className="p-2.5">Ventas Totales</th>
+                                  <th className="p-2.5">Gastos Totales</th>
+                                  <th className="p-2.5">Flujo Neto Real</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y font-mono text-[10.5px]">
+                                {getMonthlySummaries().length === 0 ? (
+                                  <tr>
+                                    <td colSpan={5} className="p-4 text-center text-slate-400">Sin historial en base local</td>
+                                  </tr>
+                                ) : (
+                                  getMonthlySummaries().map((m) => (
+                                    <tr key={m.month} className="hover:bg-slate-50 font-medium">
+                                      <td className="p-2.5 font-bold text-slate-900">{formatMonthName(m.month)}</td>
+                                      <td className="p-2.5 text-slate-650">{m.dayCount} {m.dayCount === 1 ? 'día' : 'días'}</td>
+                                      <td className="p-2.5 text-emerald-700 font-bold">+${m.salesRevenue.toLocaleString()}</td>
+                                      <td className="p-2.5 text-rose-700">-${m.expenses.toLocaleString()}</td>
+                                      <td className="p-2.5 text-teal-800 font-extrabold">${m.netCash.toLocaleString()}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
 
                       <div className="p-3 bg-slate-50 border-t text-right">
