@@ -7,9 +7,22 @@ import BarcodeScannerModal from './BarcodeScannerModal';
 export default function InventarioTab() {
   const { isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor, handleDeleteSupplier, handleDeleteLab, handleDeleteCat } = useAppContext();
 
+  const [showSuccessModal, setShowSuccessModal] = React.useState(false);
   const [showBarcodeScannerForNewProduct, setShowBarcodeScannerForNewProduct] = React.useState(false);
   const [showBarcodeScannerForRestock, setShowBarcodeScannerForRestock] = React.useState(false);
   const [profitPercentage, setProfitPercentage] = React.useState<string>("");
+
+  const onSubmitProductForm = async (e: React.FormEvent) => {
+    if (!newProdName || !newProdLab || !newProdCategory) {
+      await handleCreateProduct(e);
+      return;
+    }
+    await handleCreateProduct(e);
+    setShowSuccessModal(true);
+    setTimeout(() => {
+      setShowSuccessModal(false);
+    }, 500);
+  };
 
   const [editingProduct, setEditingProduct] = React.useState<any>(null);
   const [showPasswordPromptForProduct, setShowPasswordPromptForProduct] = React.useState<any>(null);
@@ -491,7 +504,7 @@ export default function InventarioTab() {
                 {inventoryFormMode === "initial" && (
                   <div className="bg-white rounded-xl border border-slate-200 p-5 md:p-6 shadow-sm">
                     <h3 className="font-bold text-slate-900 text-base mb-4 border-b pb-2">Registrar Producto de Inventario Inicial</h3>
-                    <form onSubmit={handleCreateProduct} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <form onSubmit={onSubmitProductForm} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nombre Comercial *</label>
@@ -1482,7 +1495,8 @@ export default function InventarioTab() {
                 )}
 
                 {/* REAL TIME FILTERABLE MASTER TABLE */}
-                <div className="bg-white rounded-xl border border-slate-200 p-5 md:p-6 shadow-sm space-y-4">
+                {inventoryFormMode === "none" && (
+                  <div className="bg-white rounded-xl border border-slate-200 p-5 md:p-6 shadow-sm space-y-4">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                       <h3 className="font-bold text-slate-950 text-base leading-none">Catálogo Detallado de Fármacos</h3>
@@ -1626,9 +1640,11 @@ export default function InventarioTab() {
                   </div>
 
                 </div>
-              </div>
+              )}
+
             </div>
-          )}
+          </div>
+        )}
       {showBarcodeScannerForNewProduct && (
         <BarcodeScannerModal
           onScan={(code) => {
@@ -1999,6 +2015,20 @@ export default function InventarioTab() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300">
+          <div className="bg-white rounded-2xl p-6 shadow-xl border border-emerald-100 flex flex-col items-center gap-3 max-w-xs w-full mx-4 transform scale-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center animate-bounce">
+              <svg className="w-6 h-6 stroke-current" fill="none" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+            </div>
+            <span className="font-bold text-slate-900 text-sm">¡Producto Agregado!</span>
+            <span className="text-xs text-slate-500 font-semibold text-center leading-none">Guardado con éxito</span>
           </div>
         </div>
       )}
