@@ -1230,68 +1230,6 @@ export default function App() {
           )}
         </main>
 
-        {currentUser && activeTab === "inventario" && currentUser.role === "admin" && (
-          <nav 
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 py-2 px-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] flex items-center justify-around md:hidden"
-            style={{ 
-              position: 'fixed', 
-              bottom: 0, 
-              left: 0, 
-              right: 0, 
-              transform: 'translate3d(0, 0, 0)', 
-              WebkitTransform: 'translate3d(0, 0, 0)',
-              willChange: 'transform'
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setInventoryFormMode("none");
-                setProdSearchQuery("");
-              }}
-              className={`flex flex-col items-center gap-1 p-1.5 transition-all ${
-                inventoryFormMode === "none" ? "text-teal-650 font-bold" : "text-slate-500"
-              }`}
-            >
-              <Package className="w-5 h-5" />
-              <span className="text-[9px]">Productos</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setInventoryFormMode(inventoryFormMode === "initial" ? "none" : "initial")}
-              className={`flex flex-col items-center gap-1 p-1.5 transition-all ${
-                inventoryFormMode === "initial" ? "text-teal-650 font-bold" : "text-slate-500"
-              }`}
-            >
-              <Plus className="w-5 h-5" />
-              <span className="text-[9px]">Inicial</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setInventoryFormMode(inventoryFormMode === "invoice" ? "none" : "invoice")}
-              className={`flex flex-col items-center gap-1 p-1.5 transition-all ${
-                inventoryFormMode === "invoice" ? "text-teal-650 font-bold" : "text-slate-500"
-              }`}
-            >
-              <FileSpreadsheet className="w-5 h-5" />
-              <span className="text-[9px]">Factura</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setInventoryFormMode(inventoryFormMode === "manage" ? "none" : "manage")}
-              className={`flex flex-col items-center gap-1 p-1.5 transition-all ${
-                inventoryFormMode === "manage" ? "text-teal-650 font-bold" : "text-slate-500"
-              }`}
-            >
-              <Building className="w-5 h-5" />
-              <span className="text-[9px]">Listas</span>
-            </button>
-          </nav>
-        )}
-
         <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400 mt-12">
           <p>© 2026 {business.name}. Todos los derechos reservados. Diseñado bajo principios de resiliencia Local-First.</p>
         </footer>
@@ -1325,6 +1263,69 @@ export default function App() {
         )}
 
       </div>
+
+      {currentUser && activeTab === "inventario" && currentUser.role === "admin" && (
+        <nav 
+          className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 py-2 px-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] flex items-center justify-around md:hidden"
+          style={{ 
+            position: 'fixed', 
+            bottom: '0px', 
+            left: '0px', 
+            right: '0px', 
+            zIndex: 9999,
+            transform: 'translate3d(0, 0, 0)', 
+            WebkitTransform: 'translate3d(0, 0, 0)',
+            willChange: 'transform'
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setInventoryFormMode("none");
+              setProdSearchQuery("");
+            }}
+            className={`flex flex-col items-center gap-1 p-1.5 transition-all ${
+              inventoryFormMode === "none" ? "text-teal-650 font-bold" : "text-slate-500"
+            }`}
+          >
+            <Package className="w-5 h-5" />
+            <span className="text-[9px]">Productos</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setInventoryFormMode(inventoryFormMode === "initial" ? "none" : "initial")}
+            className={`flex flex-col items-center gap-1 p-1.5 transition-all ${
+              inventoryFormMode === "initial" ? "text-teal-650 font-bold" : "text-slate-500"
+            }`}
+          >
+            <Plus className="w-5 h-5" />
+            <span className="text-[9px]">Inicial</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setInventoryFormMode(inventoryFormMode === "invoice" ? "none" : "invoice")}
+            className={`flex flex-col items-center gap-1 p-1.5 transition-all ${
+              inventoryFormMode === "invoice" ? "text-teal-650 font-bold" : "text-slate-500"
+            }`}
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            <span className="text-[9px]">Factura</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setInventoryFormMode(inventoryFormMode === "manage" ? "none" : "manage")}
+            className={`flex flex-col items-center gap-1 p-1.5 transition-all ${
+              inventoryFormMode === "manage" ? "text-teal-650 font-bold" : "text-slate-500"
+            }`}
+          >
+            <Building className="w-5 h-5" />
+            <span className="text-[9px]">Listas</span>
+          </button>
+        </nav>
+      )}
     </AppContext.Provider>
   );
 }
