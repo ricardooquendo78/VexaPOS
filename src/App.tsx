@@ -1266,16 +1266,13 @@ export default function App() {
 
       {currentUser && activeTab === "inventario" && currentUser.role === "admin" && (
         <nav 
-          className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 py-2 px-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] flex items-center justify-around md:hidden"
+          className="fixed bottom-0 left-0 right-0 z-[9999] bg-white border-t border-slate-200 py-2 px-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] flex items-center justify-around md:hidden"
           style={{ 
             position: 'fixed', 
             bottom: '0px', 
             left: '0px', 
-            right: '0px', 
-            zIndex: 9999,
-            transform: 'translate3d(0, 0, 0)', 
-            WebkitTransform: 'translate3d(0, 0, 0)',
-            willChange: 'transform'
+            right: '0px',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)'
           }}
         >
           <button
