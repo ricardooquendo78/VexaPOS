@@ -1213,6 +1213,7 @@ export default function App() {
     <AppContext.Provider value={appState}>
       <div id="main-app" className="min-h-screen bg-[#fafbfc] flex flex-col font-sans antialiased text-slate-900 selection:bg-teal-100 selection:text-teal-900">
         <Header />
+        {currentUser && <Navigation />}
         <main id="app-content" className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-8">
 
 
@@ -1220,7 +1221,6 @@ export default function App() {
             <Auth />
           ) : (
             <>
-              <Navigation />
               {activeTab === "inventario" && currentUser.role === "admin" && <InventarioTab />}
               {activeTab === "facturacion" && <FacturacionTab />}
               {activeTab === "cierre" && <CierreTab />}

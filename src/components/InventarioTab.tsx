@@ -352,82 +352,73 @@ export default function InventarioTab() {
   return (
     <>
       {/* TAB CONTENT: INVENTARIO */}
-            {activeTab === "inventario" && currentUser.role === "admin" && (
-              <div className="space-y-6">
+      {activeTab === "inventario" && currentUser.role === "admin" && (
+              <div className="flex flex-col md:flex-row gap-6 items-start">
                 
-                {/* 4 buttons dashboard panel */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <button
-                    onClick={() => setInventoryFormMode(inventoryFormMode === "initial" ? "none" : "initial")}
-                    className={`p-4 rounded-xl border transition-all text-left flex flex-col justify-between h-28 ${
-                      inventoryFormMode === "initial"
-                        ? "bg-teal-50 border-teal-500 text-teal-950"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-400 group"
-                    }`}
-                  >
-                    <div className="p-2 bg-teal-100 rounded-lg text-teal-700 w-fit group-hover:bg-teal-200 transition">
-                      <Plus className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="block font-bold text-sm text-slate-900">Inventario Inicial</span>
-                      <span className="text-[10px] text-slate-500">Cargar nuevo fármaco</span>
-                    </div>
-                  </button>
+                {/* Sidebar fija izquierda */}
+                <aside className="w-full md:w-56 lg:w-60 flex-shrink-0 md:sticky md:top-32 space-y-2.5">
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-3xs space-y-2">
+                    <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-2">Controles Inventario</span>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInventoryFormMode("none");
+                        setProdSearchQuery("");
+                      }}
+                      className={`w-full p-2.5 rounded-lg border transition-all text-left flex items-center gap-2.5 ${
+                        inventoryFormMode === "none"
+                          ? "bg-slate-950 border-slate-950 text-white font-bold shadow-3xs"
+                          : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Package className="w-4 h-4" />
+                      <span className="text-xs">Lista de Productos</span>
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      setInventoryFormMode("none");
-                      setProdSearchQuery("");
-                    }}
-                    className={`p-4 rounded-xl border transition-all text-left flex flex-col justify-between h-28 ${
-                      inventoryFormMode === "none"
-                        ? "bg-teal-50 border-teal-500 text-teal-950"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-400 group"
-                    }`}
-                  >
-                    <div className="p-2 bg-teal-100 rounded-lg text-teal-700 w-fit">
-                      <Package className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="block font-bold text-sm text-slate-900">Lista Productos</span>
-                      <span className="text-[10px] text-slate-500">Filtrar, stock y buscar</span>
-                    </div>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setInventoryFormMode(inventoryFormMode === "initial" ? "none" : "initial")}
+                      className={`w-full p-2.5 rounded-lg border transition-all text-left flex items-center gap-2.5 ${
+                        inventoryFormMode === "initial"
+                          ? "bg-slate-950 border-slate-950 text-white font-bold shadow-3xs"
+                          : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span className="text-xs">Inventario Inicial</span>
+                    </button>
 
-                  <button
-                    onClick={() => setInventoryFormMode(inventoryFormMode === "manage" ? "none" : "manage")}
-                    className={`p-4 rounded-xl border transition-all text-left flex flex-col justify-between h-28 ${
-                      inventoryFormMode === "manage"
-                        ? "bg-teal-50 border-teal-500 text-teal-950"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-400 group"
-                    }`}
-                  >
-                    <div className="p-2 bg-teal-100 rounded-lg text-teal-700 w-fit">
-                      <Building className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="block font-bold text-sm text-slate-900">Gestión de Listas</span>
-                      <span className="text-[10px] text-slate-500">Proveedores, Labs etc</span>
-                    </div>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setInventoryFormMode(inventoryFormMode === "invoice" ? "none" : "invoice")}
+                      className={`w-full p-2.5 rounded-lg border transition-all text-left flex items-center gap-2.5 ${
+                        inventoryFormMode === "invoice"
+                          ? "bg-slate-950 border-slate-950 text-white font-bold shadow-3xs"
+                          : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      <span className="text-xs">Ingresar Factura</span>
+                    </button>
 
-                  <button
-                    onClick={() => setInventoryFormMode(inventoryFormMode === "invoice" ? "none" : "invoice")}
-                    className={`p-4 rounded-xl border transition-all text-left flex flex-col justify-between h-28 ${
-                      inventoryFormMode === "invoice"
-                        ? "bg-teal-50 border-teal-500 text-teal-950"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-400 group"
-                    }`}
-                  >
-                    <div className="p-2 bg-teal-100 rounded-lg text-teal-700 w-fit">
-                      <FileSpreadsheet className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="block font-bold text-sm text-slate-900">Ingresar Factura</span>
-                      <span className="text-[10px] text-slate-500">Cargar lote existente</span>
-                    </div>
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setInventoryFormMode(inventoryFormMode === "manage" ? "none" : "manage")}
+                      className={`w-full p-2.5 rounded-lg border transition-all text-left flex items-center gap-2.5 ${
+                        inventoryFormMode === "manage"
+                          ? "bg-slate-950 border-slate-950 text-white font-bold shadow-3xs"
+                          : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Building className="w-4 h-4" />
+                      <span className="text-xs">Gestión de Listas</span>
+                    </button>
+                  </div>
+                </aside>
+
+                {/* Área de Contenido Principal */}
+                <div className="flex-1 min-w-0 space-y-6 w-full">    </div>
 
                 {/* FORM: INVENTARIO INICIAL */}
                 {inventoryFormMode === "initial" && (
