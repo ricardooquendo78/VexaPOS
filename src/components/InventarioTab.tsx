@@ -368,8 +368,7 @@ export default function InventarioTab() {
       {activeTab === "inventario" && currentUser.role === "admin" && (
               <div className="w-full">
                 
-                {/* Sidebar fija a toda la izquierda en pantallas md/lg (fixed left-0) */}
-                <aside className="fixed left-0 top-[180px] z-30 w-12 bg-white border border-l-0 border-slate-200 shadow-md rounded-r-xl py-3 flex flex-col gap-2.5 items-center hidden md:flex">
+                <aside className="fixed left-0 top-[180px] z-30 w-12 bg-white border border-l-0 border-slate-200 shadow-md rounded-r-xl py-3 hidden md:flex flex-col gap-2.5 items-center">
                   
                   {/* Botón: Lista de Productos */}
                   <div className="relative group">
