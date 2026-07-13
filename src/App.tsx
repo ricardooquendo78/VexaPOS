@@ -122,6 +122,9 @@ export default function App() {
   const [newProdSellMode, setNewProdSellMode] = useState<"unidad" | "sobres" | "ambas">("ambas");
   const [newProdPriceUnits, setNewProdPriceUnits] = useState(0);
 
+  // Printing state
+  const [activePrintInvoice, setActivePrintInvoice] = useState<any>(null);
+
   // Form states: Supplier Form
   const [newSupName, setNewSupName] = useState("");
   const [newSupNit, setNewSupNit] = useState("");
@@ -205,6 +208,17 @@ export default function App() {
       localStorage.removeItem("vexapos_user");
     }
   }, [currentUser]);
+
+  // Trigger print dialog when activePrintInvoice changes
+  useEffect(() => {
+    if (activePrintInvoice) {
+      const timer = setTimeout(() => {
+        window.print();
+        setActivePrintInvoice(null);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [activePrintInvoice]);
 
   // Simulate local database preseed on load and poll every 30 seconds
   useEffect(() => {
@@ -1011,6 +1025,9 @@ export default function App() {
       }
     }
 
+    // Disparar impresión
+    setActivePrintInvoice(payload);
+
     setPosCart([]);
     setInvoiceClientNit("");
     setShowInvoicePreview(false);
@@ -1206,7 +1223,8 @@ export default function App() {
   const restockProductFactor = restockSelectedProduct?.conversionFactor || 1;
 
   const appState = {
-    isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor, handleDeleteSupplier, handleDeleteLab, handleDeleteCat
+    isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor, handleDeleteSupplier, handleDeleteLab, handleDeleteCat,
+    activePrintInvoice, setActivePrintInvoice
   };
 
   return (
@@ -1322,6 +1340,68 @@ export default function App() {
             <span className="text-[9px]">Listas</span>
           </button>
         </nav>
+      )}
+      {activePrintInvoice && (
+        <div className="print-only ticket-container">
+          <div className="ticket-header">
+            <h2 className="ticket-title">{business.name}</h2>
+            <p className="ticket-subtitle">NIT: {business.nit || '---'}</p>
+            <p className="ticket-subtitle">{business.address || 'Droguería Local'}</p>
+            <p className="ticket-subtitle">Tel: {business.phone || '---'}</p>
+            <div className="ticket-divider" />
+          </div>
+          
+          <div className="ticket-info">
+            <p><strong>FACTURA:</strong> {activePrintInvoice.invoiceNumber}</p>
+            <p><strong>FECHA:</strong> {new Date().toLocaleString('es-CO')}</p>
+            <p><strong>VENDEDOR:</strong> {activePrintInvoice.sellerName}</p>
+            {activePrintInvoice.clientNit && (
+              <p><strong>CLIENTE NIT/CC:</strong> {activePrintInvoice.clientNit}</p>
+            )}
+            <div className="ticket-divider" />
+          </div>
+
+          <table className="ticket-table">
+            <thead>
+              <tr>
+                <th className="text-left">Detalle</th>
+                <th className="text-right">Cant.</th>
+                <th className="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activePrintInvoice.items.map((item: any, idx: number) => {
+                const cantDesc = item.quantitySkins > 0 && item.quantityUnits > 0
+                  ? `${item.quantitySkins}c + ${item.quantityUnits}u`
+                  : item.quantitySkins > 0
+                    ? `${item.quantitySkins}c`
+                    : `${item.quantityUnits}u`;
+                return (
+                  <tr key={idx}>
+                    <td>{item.productName}</td>
+                    <td className="text-right">{cantDesc}</td>
+                    <td className="text-right">${item.subtotal.toLocaleString('es-CO')}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          
+          <div className="ticket-divider" />
+          
+          <div className="ticket-totals">
+            <div className="ticket-total-row">
+              <span><strong>TOTAL:</strong></span>
+              <span><strong>${activePrintInvoice.total.toLocaleString('es-CO')} COP</strong></span>
+            </div>
+          </div>
+          
+          <div className="ticket-footer">
+            <div className="ticket-divider" />
+            <p>¡Gracias por su compra!</p>
+            <p>VexaPOS - Control Local-First</p>
+          </div>
+        </div>
       )}
     </AppContext.Provider>
   );

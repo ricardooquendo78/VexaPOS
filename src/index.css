@@ -1,1 +1,127 @@
 @import "tailwindcss";
+
+/* Ocultar elementos de pantalla y ajustar para impresora térmica */
+@media print {
+  /* Hojas y márgenes físicos */
+  @page {
+    margin: 0;
+  }
+  
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 80mm !important; /* Estándar de facturas de droguería */
+  }
+
+  /* Ocultar aplicación completa menos la sección de ticket */
+  #main-app, footer, button, select, input, .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Estilos específicos del ticket */
+  .ticket-container {
+    width: 100% !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 4mm 2mm !important;
+    box-sizing: border-box !important;
+  }
+
+  .ticket-header {
+    text-align: center !important;
+    margin-bottom: 8px !important;
+  }
+
+  .ticket-title {
+    font-size: 14px !important;
+    font-weight: bold !important;
+    margin: 0 0 2px 0 !important;
+  }
+
+  .ticket-subtitle {
+    font-size: 10px !important;
+    margin: 0 0 2px 0 !important;
+  }
+
+  .ticket-divider {
+    border-top: 1px dashed #000000 !important;
+    margin: 6px 0 !important;
+  }
+
+  .ticket-info {
+    font-size: 10px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .ticket-info p {
+    margin: 0 0 2px 0 !important;
+  }
+
+  .ticket-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10px !important;
+    margin: 6px 0 !important;
+  }
+
+  .ticket-table th {
+    border-bottom: 1px solid #000000 !important;
+    font-weight: bold !important;
+    padding-bottom: 3px !important;
+    text-transform: uppercase !important;
+  }
+
+  .ticket-table td {
+    padding: 3px 0 !important;
+    vertical-align: top !important;
+  }
+
+  .text-left {
+    text-align: left !important;
+  }
+
+  .text-right {
+    text-align: right !important;
+  }
+
+  .ticket-totals {
+    font-size: 11px !important;
+    margin-top: 6px !important;
+    border-top: 1px dashed #000000 !important;
+    padding-top: 6px !important;
+  }
+
+  .ticket-total-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    font-size: 12px !important;
+  }
+
+  .ticket-footer {
+    text-align: center !important;
+    font-size: 9px !important;
+    margin-top: 15px !important;
+    border-top: 1px dashed #000000 !important;
+    padding-top: 6px !important;
+  }
+
+  .ticket-footer p {
+    margin: 0 0 2px 0 !important;
+  }
+}
+
+/* En pantalla normal, ocultar la plantilla de impresión */
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
