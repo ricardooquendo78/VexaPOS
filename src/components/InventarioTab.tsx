@@ -11,6 +11,52 @@ export default function InventarioTab() {
   const [showBarcodeScannerForRestock, setShowBarcodeScannerForRestock] = React.useState(false);
   const [profitPercentage, setProfitPercentage] = React.useState<string>("");
 
+  const [editingProduct, setEditingProduct] = React.useState<any>(null);
+  const [showPasswordPromptForProduct, setShowPasswordPromptForProduct] = React.useState<any>(null);
+  const [enteredPassword, setEnteredPassword] = React.useState("");
+  const [passwordError, setPasswordError] = React.useState("");
+  const [isVerifyingPassword, setIsVerifyingPassword] = React.useState(false);
+
+  // Edit product form states
+  const [editName, setEditName] = React.useState("");
+  const [editExp, setEditExp] = React.useState("");
+  const [editLab, setEditLab] = React.useState("");
+  const [editCost, setEditCost] = React.useState<number>(0);
+  const [editPrice, setEditPrice] = React.useState<number>(0);
+  const [editPriceUnits, setEditPriceUnits] = React.useState<number>(0);
+  const [editCategory, setEditCategory] = React.useState("");
+  const [editSkins, setEditSkins] = React.useState<number>(0);
+  const [editUnits, setEditUnits] = React.useState<number>(0);
+  const [editFactor, setEditFactor] = React.useState<number>(1);
+  const [editMinAlert, setEditMinAlert] = React.useState<number>(5);
+  const [editBarcode, setEditBarcode] = React.useState("");
+  const [editFoto, setEditFoto] = React.useState("");
+  const [editSellMode, setEditSellMode] = React.useState<"unidad" | "sobres" | "ambas">("ambas");
+  const [editProfitPercentage, setEditProfitPercentage] = React.useState<string>("");
+
+  const handleEditPercentageChange = (pctStr: string) => {
+    setEditProfitPercentage(pctStr);
+    const pct = parseFloat(pctStr);
+    if (!isNaN(pct) && pct >= 0 && editPrice > 0) {
+      const calculatedCost = editPrice / (1 + pct / 100);
+      setEditCost(Math.round(calculatedCost));
+    }
+  };
+
+  const handleEditPriceChange = (priceVal: number) => {
+    setEditPrice(priceVal);
+    const pct = parseFloat(editProfitPercentage);
+    if (!isNaN(pct) && pct >= 0 && priceVal > 0) {
+      const calculatedCost = priceVal / (1 + pct / 100);
+      setEditCost(Math.round(calculatedCost));
+    }
+  };
+
+  const handleEditCostChange = (costVal: number) => {
+    setEditCost(costVal);
+    setEditProfitPercentage("");
+  };
+
   const handlePercentageChange = (pctStr: string) => {
     setProfitPercentage(pctStr);
     const pct = parseFloat(pctStr);
@@ -47,6 +93,167 @@ export default function InventarioTab() {
       setProfitPercentage("");
     }
   }, [newProdName]);
+
+  const handleVerifyPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    setPasswordError("");
+    setIsVerifyingPassword(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: currentUser.email, password: enteredPassword })
+      });
+      const data = await response.json();
+      if (data.success) {
+        // Password verified! Open editing modal and copy values
+        const p = showPasswordPromptForProduct;
+        if (p) {
+          setEditingProduct(p);
+          setEditName(p.name);
+          setEditExp(p.expirationDate || "");
+          setEditLab(p.laboratory);
+          setEditCost(p.cost);
+          setEditPrice(p.price);
+          setEditPriceUnits(p.priceUnits || 0);
+          setEditCategory(p.category);
+          setEditSkins(p.quantityOnSkins);
+          setEditUnits(p.quantityUnits);
+          setEditFactor(p.conversionFactor || 1);
+          setEditMinAlert(p.minStockAlert || 5);
+          setEditBarcode(p.barcode || "");
+          setEditFoto(p.fotoUrl || "");
+          setEditSellMode(p.conversionFactor > 1 ? "ambas" : (p.priceUnits ? "unidad" : "sobres"));
+          setEditProfitPercentage("");
+        }
+        setShowPasswordPromptForProduct(null);
+        setEnteredPassword("");
+      } else {
+        setPasswordError("Contraseña incorrecta. Inténtelo de nuevo.");
+      }
+    } catch (err) {
+      setPasswordError("Error de conexión al verificar la contraseña.");
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  };
+
+  const handleSaveEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    let savedSkins = 0;
+    let savedUnits = 0;
+    let savedFactor = 1;
+
+    if (editSellMode === "unidad") {
+      savedSkins = Number(editSkins) || 0;
+      savedUnits = 0;
+      savedFactor = 1;
+    } else if (editSellMode === "sobres") {
+      savedSkins = Number(editSkins) || 0;
+      savedUnits = 0;
+      savedFactor = 1;
+    } else { // "ambas"
+      savedSkins = Number(editSkins) || 0;
+      savedFactor = Number(editFactor) || 1;
+      savedUnits = (Number(editUnits) || 0) % savedFactor;
+    }
+
+    const payload = {
+      id: editingProduct.id,
+      name: editName,
+      expirationDate: editExp || "2027-12-31",
+      laboratory: editLab,
+      cost: Number(editCost) || 0,
+      price: Number(editPrice) || 0,
+      priceUnits: editSellMode === "ambas" ? (Number(editPriceUnits) || 0) : undefined,
+      category: editCategory,
+      quantityOnSkins: savedSkins,
+      quantityUnits: savedUnits,
+      conversionFactor: savedFactor,
+      minStockAlert: Number(editMinAlert) || 5,
+      barcode: editBarcode,
+      fotoUrl: editFoto || "",
+    };
+
+    if (isOffline) {
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...payload } : p));
+      setOfflineQueue(prev => [...prev, {
+        id: "action-edit-" + Date.now(),
+        type: "UPDATE",
+        entity: "product_edit",
+        data: payload,
+        timestamp: new Date().toISOString()
+      }]);
+      setSyncLogs(prev => [`[Offline] Producto editado localmente: "${payload.name}"`, ...prev]);
+      setEditingProduct(null);
+    } else {
+      try {
+        const response = await fetch("/api/inventory/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+          setSyncLogs(prev => [`[Servidor] Producto editado: "${payload.name}"`, ...prev]);
+          setEditingProduct(null);
+          fetchInitialData();
+        } else {
+          alert("Error al actualizar el producto en el servidor.");
+        }
+      } catch (err) {
+        alert("Error de conexión. Se guardó localmente en la cola offline.");
+        setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...payload } : p));
+        setOfflineQueue(prev => [...prev, {
+          id: "action-edit-" + Date.now(),
+          type: "UPDATE",
+          entity: "product_edit",
+          data: payload,
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    }
+  };
+
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 200;
+        const MAX_HEIGHT = 200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setEditFoto(dataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1263,12 +1470,13 @@ export default function InventarioTab() {
                           <th className="p-3 text-center">Unidades Sueltas</th>
                           <th className="p-3">Alerta de Stock (Mínimo)</th>
                           <th className="p-3">Próximo Vencimiento</th>
+                          <th className="p-3 text-center">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y text-slate-700">
                         {filteredProducts.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="p-8 text-center text-slate-400">
+                            <td colSpan={10} className="p-8 text-center text-slate-400">
                               No se encontraron resultados
                             </td>
                           </tr>
@@ -1337,6 +1545,15 @@ export default function InventarioTab() {
                                     {p.expirationDate || "Sin fecha"}
                                   </span>
                                 </td>
+                                <td className="p-3 text-center">
+                                  <button
+                                    onClick={() => setShowPasswordPromptForProduct(p)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+                                  >
+                                    <Settings className="w-3.5 h-3.5" />
+                                    <span>Editar</span>
+                                  </button>
+                                </td>
                               </tr>
                             );
                           })
@@ -1381,6 +1598,350 @@ export default function InventarioTab() {
           }}
           onClose={() => setShowBarcodeScannerForRestock(false)}
         />
+      )}
+
+      {showPasswordPromptForProduct && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden text-slate-800 border">
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+              <h4 className="font-bold text-sm">Validación de Administrador</h4>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordPromptForProduct(null);
+                  setEnteredPassword("");
+                  setPasswordError("");
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleVerifyPasswordSubmit} className="p-6 space-y-4">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Para editar las cantidades, costos o precios del producto <strong>{showPasswordPromptForProduct.name}</strong>, ingrese la contraseña de su cuenta de usuario (<strong>{currentUser?.email}</strong>) por seguridad.
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Contraseña de la Cuenta *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Ingrese su contraseña"
+                  value={enteredPassword}
+                  onChange={(e) => setEnteredPassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg bg-white text-xs focus:ring-1 focus:ring-teal-650"
+                  autoFocus
+                />
+              </div>
+
+              {passwordError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-lg text-xs text-rose-800 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{passwordError}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2.5 pt-2 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordPromptForProduct(null);
+                    setEnteredPassword("");
+                    setPasswordError("");
+                  }}
+                  className="px-4 py-1.5 border hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVerifyingPassword}
+                  className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {isVerifyingPassword ? "Verificando..." : "Validar y Continuar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingProduct && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden text-slate-800 border my-8">
+            <div className="p-4 bg-teal-900 text-white flex justify-between items-center">
+              <div>
+                <h4 className="font-bold text-sm">Editar Producto</h4>
+                <p className="text-[10px] text-teal-200 mt-0.5">ID: {editingProduct.id}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingProduct(null)}
+                className="text-teal-100 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditProduct} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* Product Name */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nombre Comercial del Medicamento / Insumo *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej: Ibuprofeno 400mg Calox"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs"
+                  />
+                </div>
+
+                {/* Expiration date */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha de Expiración (Mes / Año)</label>
+                  <input
+                    type="month"
+                    value={formatToMonth(editExp)}
+                    onChange={(e) => setEditExp(e.target.value || "")}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-mono"
+                  />
+                </div>
+
+                {/* Lab */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Laboratorio Responsable *</label>
+                  <select
+                    value={editLab}
+                    onChange={(e) => setEditLab(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs"
+                  >
+                    <option value="">Seleccione laboratorio</option>
+                    {laboratories.map(lab => (
+                      <option key={lab} value={lab}>{lab}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Categoría Farmacéutica *</label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs"
+                  >
+                    <option value="">Seleccione categoría</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Barcode */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Código de Barras (EAN / UPC)</label>
+                  <input
+                    type="text"
+                    placeholder="Código leído por escáner"
+                    value={editBarcode}
+                    onChange={(e) => setEditBarcode(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-mono"
+                  />
+                </div>
+
+                {/* Sell Mode */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Modalidad de Venta *</label>
+                  <select
+                    value={editSellMode}
+                    onChange={(e) => setEditSellMode(e.target.value as any)}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold"
+                  >
+                    <option value="unidad">Sueltas / Fracciones únicamente</option>
+                    <option value="sobres">Caja / Blíster completo únicamente</option>
+                    <option value="ambas">Ambas modalidades (Caja y pastilla suelta)</option>
+                  </select>
+                </div>
+
+                {/* Factor (Conversion factor) */}
+                {editSellMode === "ambas" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Unidades por Caja/Sobre *</label>
+                    <input
+                      type="number"
+                      required
+                      min="2"
+                      value={editFactor || ""}
+                      onChange={(e) => setEditFactor(Number(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold text-teal-800"
+                    />
+                  </div>
+                )}
+
+                {/* Price (Sale Price) */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                    {editSellMode === "unidad" ? "Precio de Venta por Unidad ($) *" : "Precio de Venta por Caja/Sobre ($) *"}
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={editPrice || ""}
+                    onChange={(e) => handleEditPriceChange(Number(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold text-teal-900"
+                  />
+                </div>
+
+                {/* Profit percentage helper */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-550 uppercase tracking-wider mb-1">% Ganancia Deseado (Calculadora Ayuda)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Ej: 30"
+                    value={editProfitPercentage}
+                    onChange={(e) => handleEditPercentageChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-amber-300 rounded-lg bg-amber-50/50 text-xs font-bold text-amber-900 focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+
+                {/* Cost (Net Cost) */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo Neto de Compra ($) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={editCost || ""}
+                    onChange={(e) => handleEditCostChange(Number(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold"
+                  />
+                </div>
+
+                {/* PVP Loose (Price units) */}
+                {editSellMode === "ambas" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Precio Venta Unitario (Suelto) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={editPriceUnits || ""}
+                      onChange={(e) => setEditPriceUnits(Number(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold text-emerald-800"
+                    />
+                  </div>
+                )}
+
+                {/* Stock Sobres / Cajas */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Existencia (Cajas/Sobres) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={editSkins || ""}
+                    onChange={(e) => setEditSkins(Number(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold"
+                  />
+                </div>
+
+                {/* Stock Unidades sueltas */}
+                {editSellMode === "ambas" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Existencia Fracciones Sueltas *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={editUnits || ""}
+                      onChange={(e) => setEditUnits(Number(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-lg bg-white text-xs"
+                    />
+                  </div>
+                )}
+
+                {/* Min stock Alert threshold */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Umbral Alerta Stock Mínimo (Unidades) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={editMinAlert || ""}
+                    onChange={(e) => setEditMinAlert(Number(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs"
+                  />
+                </div>
+
+                {/* Image uploader / preview */}
+                <div className="md:col-span-2 space-y-2">
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fotografía del Fármaco / Presentación</label>
+                  <div className="flex items-center gap-4">
+                    {editFoto ? (
+                      <div className="relative w-16 h-16 rounded-lg overflow-hidden border">
+                        <img src={editFoto} alt="Preview" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setEditFoto("")}
+                          className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-[10px] font-bold"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center border border-dashed border-slate-300">
+                        <Camera className="w-6 h-6 text-slate-400" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditImageUpload}
+                        className="hidden"
+                        id="edit-file-upload"
+                      />
+                      <label
+                        htmlFor="edit-file-upload"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-250 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 cursor-pointer shadow-xs"
+                      >
+                        Subir Foto
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="px-4 py-2 border hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow-xs"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </>
   );

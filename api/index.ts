@@ -724,6 +724,42 @@ app.post("/api/inventory/initial", async (req, res) => {
   res.status(201).json({ success: true, product: newProduct });
 });
 
+// Update existing product
+app.post("/api/inventory/update", async (req, res) => {
+  const { id, name, expirationDate, laboratory, cost, price, priceUnits, category, quantityOnSkins, quantityUnits, conversionFactor, minStockAlert, barcode, fotoUrl } = req.body;
+
+  if (!id || !name || !laboratory || !category) {
+    return res.status(400).json({ success: false, message: "Faltan campos obligatorios." });
+  }
+
+  const productsList = await getProducts();
+  const p = productsList.find(prod => prod.id === id);
+  if (!p) {
+    return res.status(404).json({ success: false, message: "Producto no encontrado." });
+  }
+
+  const updatedProduct = {
+    ...p,
+    name,
+    expirationDate: expirationDate || "2027-12-31",
+    laboratory,
+    cost: Number(cost) || 0,
+    price: Number(price) || 0,
+    priceUnits: priceUnits !== undefined ? Number(priceUnits) : undefined,
+    category,
+    quantityOnSkins: Number(quantityOnSkins) || 0,
+    quantityUnits: Number(quantityUnits) || 0,
+    conversionFactor: Number(conversionFactor) || 1,
+    minStockAlert: Number(minStockAlert) || 5,
+    barcode: barcode || "",
+    fotoUrl: fotoUrl || p.fotoUrl || "",
+    isActive: true
+  };
+
+  await updateProduct(id, updatedProduct);
+  res.json({ success: true, product: updatedProduct });
+});
+
 // Inbound supplier invoice (load items)
 app.post("/api/inventory/invoice", async (req, res) => {
   const { supplierId, productId, quantitySkins, quantityUnits, cost, price, expirationDate } = req.body;
@@ -1035,6 +1071,29 @@ app.post("/api/sync", async (req, res) => {
         logs.push(`Nuevo producto offline registrado: "${data.name}"`);
       } else {
         logs.push(`Reconciliación: Producto "${data.name}" ya existía en la nube, se consolida stock.`);
+      }
+    }
+    else if (entity === "product_edit") {
+      const p = productsList.find(prod => prod.id === data.id);
+      if (p) {
+        const updated = {
+          ...p,
+          name: data.name,
+          expirationDate: data.expirationDate || p.expirationDate,
+          laboratory: data.laboratory,
+          cost: Number(data.cost) || 0,
+          price: Number(data.price) || 0,
+          priceUnits: data.priceUnits !== undefined ? Number(data.priceUnits) : p.priceUnits,
+          category: data.category,
+          quantityOnSkins: Number(data.quantityOnSkins) || 0,
+          quantityUnits: Number(data.quantityUnits) || 0,
+          conversionFactor: Number(data.conversionFactor) || 1,
+          minStockAlert: Number(data.minStockAlert) || 5,
+          barcode: data.barcode || "",
+          fotoUrl: data.fotoUrl || p.fotoUrl || ""
+        };
+        await updateProduct(data.id, updated);
+        logs.push(`Edición de producto offline registrada: "${data.name}"`);
       }
     }
     else if (entity === "restock" || entity === "invoice_bulk") {
