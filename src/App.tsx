@@ -1217,7 +1217,9 @@ export default function App() {
 
   const totalInventoryPriceValue = products.reduce((acc, p) => {
     const skinValue = p.quantityOnSkins * p.price;
-    const unitValue = p.conversionFactor > 1 ? p.quantityUnits * (p.price / p.conversionFactor) : 0;
+    const unitValue = p.conversionFactor > 1 
+      ? p.quantityUnits * (p.priceUnits && p.priceUnits > 0 ? p.priceUnits : (p.price / p.conversionFactor)) 
+      : 0;
     return acc + skinValue + unitValue;
   }, 0);
 
