@@ -1164,19 +1164,19 @@ export default function App() {
     }
   };
 
-  // Report Export: Simulates dynamic xls generation and download
+  // Report Export: Generates Excel-compatible CSV downloads
   const handleDownloadXLS = (reportType: string) => {
-    let csvContent = "data:text/csv;charset=utf-8,";
+    let csvContent = "sep=,\n"; // Instrucción explícita para que Excel divida por comas independientemente de la región
     
     if (reportType === "inventario") {
-      csvContent += "ID,Nombre,Categoria,Laboratorio,Sobres o Cajas,Pastillas Sueltas,Costo Caja,Precio Venta,Fecha de Vencimiento,Codigo de Barras\n";
+      csvContent += "ID,Nombre,Categoría,Laboratorio,Sobres o Cajas,Pastillas Sueltas,Costo Caja,Precio Venta,Fecha de Vencimiento,Código de Barras\n";
       products.forEach(p => {
         csvContent += `"${p.id}","${p.name}","${p.category}","${p.laboratory}",${p.quantityOnSkins},${p.quantityUnits},${p.cost},${p.price},"${p.expirationDate}","${p.barcode || ""}"\n`;
       });
     } else if (reportType === "sales") {
-      csvContent += "Num Factura,Fecha,Seller,NIT Cliente,Total\n";
+      csvContent += "Número Factura,Fecha,Vendedor,NIT Cliente,Total\n";
       sales.forEach(s => {
-        csvContent += `"${s.invoiceNumber}","${s.dateTime}","${s.sellerName}","${s.clientNit || ""}",${s.total}\n`;
+        csvContent += `"${s.invoiceNumber}","${s.dateTime || new Date().toLocaleDateString()}","${s.sellerName}","${s.clientNit || ""}",${s.total}\n`;
       });
     } else {
       csvContent += "Fecha Cierre,Ingresos por Ventas,Gastos Registrados,Fondo Inicial,Dinero en Caja Neto,Estado\n";
@@ -1185,13 +1185,19 @@ export default function App() {
       });
     }
 
-    const encodedUri = encodeURI(csvContent);
+    // Agregar BOM de UTF-8 (\uFEFF) para que Excel reconozca tildes y eñes correctamente
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Reporte_VexaPOS_${reportType}_${new Date().toLocaleDateString()}.csv`);
+    link.setAttribute("href", url);
+    // Reemplazar diagonales de fecha para evitar nombres de archivo inválidos
+    const dateStr = new Date().toLocaleDateString('es-CO').replace(/\//g, "-");
+    link.setAttribute("download", `Reporte_VexaPOS_${reportType}_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Computes stock warnings and statistics
