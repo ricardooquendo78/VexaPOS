@@ -12,6 +12,21 @@ export default function InventarioTab() {
   const [showBarcodeScannerForRestock, setShowBarcodeScannerForRestock] = React.useState(false);
   const [profitPercentage, setProfitPercentage] = React.useState<string>("");
   const [showNewSupplierModal, setShowNewSupplierModal] = React.useState(false);
+  const [productSearchInput, setProductSearchInput] = React.useState("");
+  const [showProductDropdown, setShowProductDropdown] = React.useState(false);
+  const [showNewProductModal, setShowNewProductModal] = React.useState(false);
+
+  // Keep the input value in sync with selected product name when they select it elsewhere (e.g. from scanning)
+  React.useEffect(() => {
+    if (restockProductId) {
+      const found = products.find(p => p.id === restockProductId);
+      if (found) {
+        setProductSearchInput(`${found.name} (${found.laboratory})`);
+      }
+    } else {
+      setProductSearchInput("");
+    }
+  }, [restockProductId, products]);
 
   const onSubmitProductForm = async (e: React.FormEvent) => {
     if (!newProdName || !newProdLab || !newProdCategory) {
@@ -932,31 +947,88 @@ export default function InventarioTab() {
                         <div className="md:col-span-4 grid grid-cols-12 gap-2">
                           <div className="col-span-8">
                             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Seleccionar Producto *</label>
-                            <select
-                              value={restockProductId}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setRestockProductId(val);
-                                const found = products.find(p => p.id === val);
-                                if (found) {
-                                  setRestockCost(found.cost);
-                                  setRestockPrice(found.price);
-                                  setRestockPriceUnits(found.priceUnits || 0);
-                                  setRestockExp(found.expirationDate || "");
-                                  // auto set units to conversionFactor or 0 depending on mode
-                                  setRestockTotalUnits(found.conversionFactor > 1 ? found.conversionFactor : 0);
-                                  setRestockSkins(found.conversionFactor > 1 ? 1 : 0);
-                                }
-                              }}
-                              className="w-full px-2 py-2 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                            <div className="relative">
+                              <input
+                                type="text"
+                                placeholder="Escriba para buscar producto..."
+                                value={productSearchInput}
+                                onChange={(e) => {
+                                  setProductSearchInput(e.target.value);
+                                  setShowProductDropdown(true);
+                                  if (!e.target.value) {
+                                    setRestockProductId("");
+                                  }
+                                }}
+                                onFocus={() => setShowProductDropdown(true)}
+                                className="w-full px-3 py-2 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                              />
+                              
+                              {showProductDropdown && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setShowProductDropdown(false)}></div>
+                                  <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg z-25">
+                                    {products
+                                      .filter(p => {
+                                        const query = productSearchInput.toLowerCase();
+                                        const isSelected = restockProductId === p.id;
+                                        if (isSelected && productSearchInput === `${p.name} (${p.laboratory})`) return true;
+                                        
+                                        return p.name.toLowerCase().includes(query) || 
+                                               p.laboratory.toLowerCase().includes(query) ||
+                                               (p.barcode && p.barcode.includes(query));
+                                      })
+                                      .sort((a, b) => a.name.localeCompare(b.name))
+                                      .map(p => (
+                                        <div
+                                          key={p.id}
+                                          onClick={() => {
+                                            setRestockProductId(p.id);
+                                            setProductSearchInput(`${p.name} (${p.laboratory})`);
+                                            setShowProductDropdown(false);
+                                            setRestockCost(p.cost);
+                                            setRestockPrice(p.price);
+                                            setRestockPriceUnits(p.priceUnits || 0);
+                                            setRestockExp(p.expirationDate || "");
+                                            setRestockTotalUnits(p.conversionFactor > 1 ? p.conversionFactor : 0);
+                                            setRestockSkins(p.conversionFactor > 1 ? 1 : 0);
+                                          }}
+                                          className={`px-3 py-2 text-xs font-medium cursor-pointer transition hover:bg-slate-50 flex justify-between items-center ${
+                                            restockProductId === p.id ? 'bg-teal-50/50 text-teal-900 font-bold' : 'text-slate-800'
+                                          }`}
+                                        >
+                                          <div>
+                                            <span className="block font-bold">{p.name}</span>
+                                            <span className="block text-[10px] text-slate-500 mt-0.5">{p.laboratory}</span>
+                                          </div>
+                                          {p.barcode && (
+                                            <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1 py-0.5 rounded">
+                                              {p.barcode}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                      {products.filter(p => {
+                                        const query = productSearchInput.toLowerCase();
+                                        const isSelected = restockProductId === p.id;
+                                        if (isSelected && productSearchInput === `${p.name} (${p.laboratory})`) return true;
+                                        return p.name.toLowerCase().includes(query) || p.laboratory.toLowerCase().includes(query) || (p.barcode && p.barcode.includes(query));
+                                      }).length === 0 && (
+                                        <div className="p-3 text-center text-xs text-slate-500 italic">
+                                          No se encontraron productos similares.
+                                        </div>
+                                      )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowNewProductModal(true)}
+                              className="mt-2 text-[11px] text-teal-700 hover:text-teal-950 font-bold flex items-center gap-1 cursor-pointer transition-all hover:underline"
                             >
-                              <option value="">-- Buscar producto --</option>
-                              {products.map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} ({p.laboratory})
-                                </option>
-                              ))}
-                            </select>
+                              <PlusCircle className="w-3.5 h-3.5" />
+                              <span>Crear Nuevo Producto</span>
+                            </button>
                           </div>
                            <div className="col-span-4">
                             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 flex items-center justify-between">
@@ -2077,6 +2149,397 @@ export default function InventarioTab() {
                   className="px-4 py-2 bg-slate-900 hover:bg-slate-950 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
                   Registrar Proveedor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showNewProductModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-2xl w-full overflow-hidden flex flex-col my-8 transform scale-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-slate-150 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="font-black text-slate-900 text-sm uppercase tracking-wide">Registrar Nuevo Producto</h3>
+                <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Crea una nueva referencia en tu catálogo de productos.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewProductModal(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                await onSubmitProductForm(e);
+                setShowNewProductModal(false);
+              }}
+              className="p-5 space-y-4 max-h-[75vh] overflow-y-auto"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nombre Comercial *</label>
+                  <input
+                    type="text"
+                    value={newProdName}
+                    onChange={(e) => setNewProdName(e.target.value)}
+                    required
+                    placeholder="Ej: Dolex Forte Tabletas"
+                    className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha de Vencimiento</label>
+                  <input
+                    type="month"
+                    value={formatToMonth(newProdExp)}
+                    onChange={(e) => setNewProdExp(e.target.value || "")}
+                    className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Laboratorio *</label>
+                  <select
+                    value={newProdLab}
+                    onChange={(e) => setNewProdLab(e.target.value)}
+                    required
+                    className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-semibold text-slate-900"
+                  >
+                    <option value="">Seleccione...</option>
+                    {laboratories.map(lab => (
+                      <option key={lab} value={lab}>{lab}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Clase / Categoría *</label>
+                  <select
+                    value={newProdCategory}
+                    onChange={(e) => setNewProdCategory(e.target.value)}
+                    required
+                    className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-semibold text-slate-900"
+                  >
+                    <option value="">Seleccione...</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">¿Cómo se vende este producto? *</label>
+                  <span className="text-[10.5px] text-slate-500 block mt-0.5">Define las unidades y balances para la venta en el mostrador</span>
+                </div>
+                <div className="flex bg-slate-200/60 p-1 rounded-lg gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewProdSellMode("unidad");
+                      setNewProdFactor(1);
+                      setNewProdSkins(0);
+                      setNewProdUnits(0);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-bold uppercase transition cursor-pointer ${
+                      newProdSellMode === "unidad" 
+                        ? "bg-teal-600 text-white shadow-sm" 
+                        : "text-slate-600 hover:text-slate-800 hover:bg-slate-200/40"
+                    }`}
+                  >
+                    Por Unidad
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewProdSellMode("sobres");
+                      setNewProdFactor(1);
+                      setNewProdSkins(0);
+                      setNewProdUnits(0);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-bold uppercase transition cursor-pointer ${
+                      newProdSellMode === "sobres" 
+                        ? "bg-teal-600 text-white shadow-sm" 
+                        : "text-slate-600 hover:text-slate-800 hover:bg-slate-200/40"
+                    }`}
+                  >
+                    Por Sobres
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewProdSellMode("ambas");
+                      setNewProdFactor(10);
+                      setNewProdSkins(0);
+                      setNewProdUnits(0);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-bold uppercase transition cursor-pointer ${
+                      newProdSellMode === "ambas" 
+                        ? "bg-teal-600 text-white shadow-sm" 
+                        : "text-slate-600 hover:text-slate-800 hover:bg-slate-200/40"
+                    }`}
+                  >
+                    Las dos (Ambas)
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/50 p-4 rounded-lg border border-slate-150">
+                {newProdSellMode === "unidad" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo Neto x Unidad</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdCost || ""}
+                        onChange={(e) => handleCostChange(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Ej: 30"
+                        value={profitPercentage || ""}
+                        onChange={(e) => handlePercentageChange(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Venta x Unidad *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdPrice || ""}
+                        onChange={(e) => handlePriceChange(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-teal-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cant. Unidades</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdSkins || ""}
+                        onChange={(e) => setNewProdSkins(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {newProdSellMode === "sobres" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo Neto x Sobre</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdCost || ""}
+                        onChange={(e) => handleCostChange(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Ej: 30"
+                        value={profitPercentage || ""}
+                        onChange={(e) => handlePercentageChange(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Venta x Sobre *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdPrice || ""}
+                        onChange={(e) => handlePriceChange(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-teal-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cant. Sobres</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdSkins || ""}
+                        onChange={(e) => setNewProdSkins(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {newProdSellMode === "ambas" && (
+                  <div className="col-span-2 md:col-span-4 grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo Neto (Caja/Sobre)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdCost || ""}
+                        onChange={(e) => handleCostChange(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-teal-650 uppercase tracking-wider mb-1">% Ganancia</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Ej: 30"
+                        value={profitPercentage || ""}
+                        onChange={(e) => handlePercentageChange(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Venta (Caja/Sobre) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdPrice || ""}
+                        onChange={(e) => handlePriceChange(Number(e.target.value))}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-teal-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Venta (Unidad Suelta) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdPriceUnits || ""}
+                        onChange={(e) => setNewProdPriceUnits(Number(e.target.value))}
+                        placeholder="Ej: 500"
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-teal-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-teal-700 uppercase tracking-wide mb-1">¿Unidades por sobre? *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newProdFactor || ""}
+                        onChange={(e) => {
+                          const newFactor = Math.max(1, Number(e.target.value));
+                          setNewProdFactor(newFactor);
+                          const total = newProdSkins * newFactor;
+                          setNewProdUnits(total);
+                        }}
+                        placeholder="Ej: 10 pastillas"
+                        className="w-full px-3 py-1.5 border border-teal-200 bg-teal-50/20 rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide mb-1">¿Cuántos sobres? *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProdSkins || ""}
+                        onChange={(e) => {
+                          const newSkins = Math.max(0, Number(e.target.value));
+                          setNewProdSkins(newSkins);
+                          const factor = newProdFactor || 1;
+                          const leftover = newProdUnits % factor;
+                          const total = newSkins * factor + leftover;
+                          setNewProdUnits(total);
+                        }}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                      />
+                    </div>
+                    <div className="col-span-2 bg-emerald-50/40 p-3 rounded-lg border border-emerald-100 flex flex-col justify-center">
+                      <label className="block text-xs font-bold text-emerald-800 uppercase tracking-wider mb-1">¿Unidades Totales? *</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={newProdUnits || ""}
+                          onChange={(e) => {
+                            const newUnits = Math.max(0, Number(e.target.value));
+                            setNewProdUnits(newUnits);
+                            const factor = newProdFactor || 1;
+                            const computedSkins = Math.floor(newUnits / factor);
+                            setNewProdSkins(computedSkins);
+                          }}
+                          className="w-full px-3 py-1.5 border border-emerald-250 bg-white rounded-md text-xs font-extrabold text-emerald-950"
+                        />
+                        <span className="text-[10px] text-emerald-700 font-bold whitespace-nowrap min-w-fit">
+                          ({newProdSkins} s. y {newProdUnits % (newProdFactor || 1)} u.)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Stock Mínimo Alerta</label>
+                  <input
+                    type="number"
+                    value={newProdMinAlert || ""}
+                    onChange={(e) => setNewProdMinAlert(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Código de Barras</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Escanear o digitar..."
+                      value={newProdBarcode || ""}
+                      onChange={(e) => setNewProdBarcode(e.target.value)}
+                      className="flex-1 px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowBarcodeScannerForNewProduct(true)}
+                      className="px-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-250 rounded-md text-xs font-bold flex items-center justify-center cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-slate-600" />
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">URL Foto (Opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={newProdFoto || ""}
+                    onChange={(e) => setNewProdFoto(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900 placeholder:font-normal"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-150">
+                <button
+                  type="button"
+                  onClick={() => setShowNewProductModal(false)}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
+                >
+                  Registrar Producto
                 </button>
               </div>
             </form>
