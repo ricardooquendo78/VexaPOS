@@ -424,58 +424,28 @@ async function getClosure(date: string) {
   if (mongoDb) {
     let active: any = await mongoDb.collection("closures").findOne({ isClosed: false });
     
-    if (active) {
-      if (active.date !== date) {
-        // Cierre automático: el día cambió
-        active.isClosed = true;
-        active.closedAt = new Date().toISOString();
-        const { _id, ...rest } = active;
-        await mongoDb.collection("closures").updateOne({ id: active.id }, { $set: rest });
-        active = null;
-      }
-    }
-    
-    if (!active) {
-      const closedToday = await mongoDb.collection("closures").findOne({ date, isClosed: true });
-      if (closedToday) {
-        return computeFinalCash(closedToday);
-      }
-      
-      active = {
-        id: "close-" + date,
-        date,
-        totalSalesCount: 0,
-        totalSalesRevenue: 0,
-        totalExpenses: 0,
-        initialCash: 100000,
-        finalCash: 100000,
-        expenses: [],
-        isClosed: false
-      };
-      await mongoDb.collection("closures").insertOne({ ...active } as any);
-    }
-    
-    return computeFinalCash(active);
-  }
-  
-  const db = loadDb();
-  let active = db.closures.find(c => !c.isClosed);
-  if (active) {
-    if (active.date !== date) {
+    if (active && active.date < date) {
+      // Cierre automático: el día cambió hacia adelante, cerramos el activo antiguo
       active.isClosed = true;
       active.closedAt = new Date().toISOString();
+      const { _id, ...rest } = active;
+      await mongoDb.collection("closures").updateOne({ id: active.id }, { $set: rest });
       active = null;
-      saveDb(db);
-    }
-  }
-  
-  if (!active) {
-    const closedToday = db.closures.find(c => c.date === date && c.isClosed);
-    if (closedToday) {
-      return computeFinalCash(closedToday);
     }
     
-    active = {
+    if (active && active.date === date) {
+      return computeFinalCash(active);
+    }
+    
+    const existing = await mongoDb.collection("closures").findOne({ date });
+    if (existing) {
+      return computeFinalCash(existing);
+    }
+    
+    const todayStr = getBogotaDateStr();
+    const shouldBeClosed = date < todayStr;
+    
+    const newClosure = {
       id: "close-" + date,
       date,
       totalSalesCount: 0,
@@ -484,13 +454,49 @@ async function getClosure(date: string) {
       initialCash: 100000,
       finalCash: 100000,
       expenses: [],
-      isClosed: false
+      isClosed: shouldBeClosed,
+      ...(shouldBeClosed ? { closedAt: new Date().toISOString() } : {})
     };
-    db.closures.push(active);
+    await mongoDb.collection("closures").insertOne({ ...newClosure } as any);
+    return computeFinalCash(newClosure);
+  }
+  
+  const db = loadDb();
+  let active = db.closures.find(c => !c.isClosed);
+  if (active && active.date < date) {
+    active.isClosed = true;
+    active.closedAt = new Date().toISOString();
+    active = null;
     saveDb(db);
   }
   
-  return computeFinalCash(active);
+  if (active && active.date === date) {
+    return computeFinalCash(active);
+  }
+  
+  const existing = db.closures.find(c => c.date === date);
+  if (existing) {
+    return computeFinalCash(existing);
+  }
+  
+  const todayStr = getBogotaDateStr();
+  const shouldBeClosed = date < todayStr;
+  
+  const newClosure = {
+    id: "close-" + date,
+    date,
+    totalSalesCount: 0,
+    totalSalesRevenue: 0,
+    totalExpenses: 0,
+    initialCash: 100000,
+    finalCash: 100000,
+    expenses: [],
+    isClosed: shouldBeClosed,
+    ...(shouldBeClosed ? { closedAt: new Date().toISOString() } : {})
+  };
+  db.closures.push(newClosure);
+  saveDb(db);
+  return computeFinalCash(newClosure);
 }
 
 async function getClosedToday(date: string) {
@@ -612,91 +618,51 @@ async function deductProductStock(productId: string, deductSkins: number, deduct
 }
 
 async function incrementClosureTotals(date: string, totalRevenue: number, salesCountIncrement = 1) {
+  const closure = await getClosure(date);
   if (mongoDb) {
     await mongoDb.collection("closures").updateOne(
-      { id: "close-" + date },
+      { id: closure.id },
       {
         $inc: {
           totalSalesCount: salesCountIncrement,
           totalSalesRevenue: totalRevenue
-        },
-        $setOnInsert: {
-          date: date,
-          totalExpenses: 0,
-          initialCash: 100000,
-          expenses: [],
-          isClosed: false
         }
-      },
-      { upsert: true }
+      }
     );
     return;
   }
   const db = loadDb();
-  let closure = db.closures.find(c => c.date === date && !c.isClosed);
-  if (!closure) {
-    closure = {
-      id: "close-" + date,
-      date: date,
-      totalSalesCount: salesCountIncrement,
-      totalSalesRevenue: totalRevenue,
-      totalExpenses: 0,
-      initialCash: 100000,
-      finalCash: 100000 + totalRevenue,
-      expenses: [],
-      isClosed: false
-    };
-    db.closures.push(closure);
-  } else {
-    closure.totalSalesCount += salesCountIncrement;
-    closure.totalSalesRevenue += totalRevenue;
-    closure.finalCash += totalRevenue;
+  const idx = db.closures.findIndex(c => c.id === closure.id);
+  if (idx !== -1) {
+    db.closures[idx].totalSalesCount += salesCountIncrement;
+    db.closures[idx].totalSalesRevenue += totalRevenue;
+    db.closures[idx].finalCash += totalRevenue;
+    saveDb(db);
   }
-  saveDb(db);
 }
 
 async function addExpenseToClosure(date: string, expense: any) {
+  const closure = await getClosure(date);
   if (mongoDb) {
     await mongoDb.collection("closures").updateOne(
-      { id: "close-" + date },
+      { id: closure.id },
       {
         $push: { expenses: expense } as any,
         $inc: {
           totalExpenses: expense.amount
-        },
-        $setOnInsert: {
-          date: date,
-          totalSalesCount: 0,
-          totalSalesRevenue: 0,
-          initialCash: 100000,
-          isClosed: false
         }
-      },
-      { upsert: true }
+      }
     );
     return;
   }
   const db = loadDb();
-  let closure = db.closures.find(c => c.date === date && !c.isClosed);
-  if (!closure) {
-    closure = {
-      id: "close-" + date,
-      date: date,
-      totalSalesCount: 0,
-      totalSalesRevenue: 0,
-      totalExpenses: expense.amount,
-      initialCash: 100000,
-      finalCash: 100000 - expense.amount,
-      expenses: [expense],
-      isClosed: false
-    };
-    db.closures.push(closure);
-  } else {
-    closure.expenses.push(expense);
-    closure.totalExpenses += expense.amount;
-    closure.finalCash -= expense.amount;
+  const idx = db.closures.findIndex(c => c.id === closure.id);
+  if (idx !== -1) {
+    db.closures[idx].expenses.push(expense);
+    db.closures[idx].totalExpenses += expense.amount;
+    db.closures[idx].finalCash -= expense.amount;
+    saveDb(db);
   }
-  saveDb(db);
 }
 
 const app = express();
@@ -852,26 +818,30 @@ app.post("/api/inventory/update", async (req, res) => {
 app.post("/api/inventory/invoice", async (req, res) => {
   const { supplierId, productId, quantitySkins, quantityUnits, cost, price, expirationDate } = req.body;
 
-  const productsList = await getProducts();
-  const p = productsList.find(prod => prod.id === productId);
-  if (!p) {
-    return res.status(404).json({ success: false, message: "Producto no encontrado." });
+  try {
+    const overrideFields: any = {};
+    if (cost !== undefined && cost !== null && cost > 0) overrideFields.cost = Number(cost);
+    if (price !== undefined && price !== null && price > 0) overrideFields.price = Number(price);
+    if (expirationDate) overrideFields.expirationDate = expirationDate;
+
+    const success = await adjustProductStock(
+      productId,
+      Number(quantitySkins) || 0,
+      Number(quantityUnits) || 0,
+      overrideFields
+    );
+    
+    if (success) {
+      const productsList = await getProducts();
+      const updated = productsList.find(prod => prod.id === productId);
+      return res.json({ success: true, product: updated });
+    } else {
+      return res.status(404).json({ success: false, message: "Producto no encontrado o no se pudo actualizar." });
+    }
+  } catch (err) {
+    console.error(`Error al cargar inventario para el producto ${productId}:`, err);
+    return res.status(500).json({ success: false, message: "Error interno al procesar factura." });
   }
-
-  p.quantityOnSkins += Number(quantitySkins) || 0;
-  p.quantityUnits += Number(quantityUnits) || 0;
-  if (cost) p.cost = Number(cost);
-  if (price) p.price = Number(price);
-  if (expirationDate) p.expirationDate = expirationDate;
-
-  if (p.quantityUnits >= p.conversionFactor && p.conversionFactor > 1) {
-    const additionalSkins = Math.floor(p.quantityUnits / p.conversionFactor);
-    p.quantityOnSkins += additionalSkins;
-    p.quantityUnits = p.quantityUnits % p.conversionFactor;
-  }
-
-  await updateProduct(productId, p);
-  res.json({ success: true, product: p });
 });
 
 // Bulk inbound supplier invoice loading (multi-item)
@@ -882,28 +852,28 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
     return res.status(400).json({ success: false, message: "No se proporcionaron productos para cargar." });
   }
 
-  const productsList = await getProducts();
   let updatedCount = 0;
 
   for (const item of items) {
     const { productId, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate } = item;
-    const p = productsList.find(prod => prod.id === productId);
-    if (p) {
-      p.quantityOnSkins += Number(quantitySkins) || 0;
-      p.quantityUnits += Number(quantityUnits) || 0;
-      if (cost !== undefined && cost !== null && cost > 0) p.cost = Number(cost);
-      if (price !== undefined && price !== null && price > 0) p.price = Number(price);
-      if (priceUnits !== undefined && priceUnits !== null && priceUnits > 0) p.priceUnits = Number(priceUnits);
-      if (expirationDate) p.expirationDate = expirationDate;
+    try {
+      const overrideFields: any = {};
+      if (cost !== undefined && cost !== null && cost > 0) overrideFields.cost = Number(cost);
+      if (price !== undefined && price !== null && price > 0) overrideFields.price = Number(price);
+      if (priceUnits !== undefined && priceUnits !== null && priceUnits > 0) overrideFields.priceUnits = Number(priceUnits);
+      if (expirationDate) overrideFields.expirationDate = expirationDate;
 
-      if (p.quantityUnits >= p.conversionFactor && p.conversionFactor > 1) {
-        const additionalSkins = Math.floor(p.quantityUnits / p.conversionFactor);
-        p.quantityOnSkins += additionalSkins;
-        p.quantityUnits = p.quantityUnits % p.conversionFactor;
+      const success = await adjustProductStock(
+        productId,
+        Number(quantitySkins) || 0,
+        Number(quantityUnits) || 0,
+        overrideFields
+      );
+      if (success) {
+        updatedCount++;
       }
-
-      await updateProduct(productId, p);
-      updatedCount++;
+    } catch (err) {
+      console.error(`Error al cargar inventario para el producto ${productId}:`, err);
     }
   }
 
