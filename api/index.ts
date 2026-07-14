@@ -114,6 +114,7 @@ function getBogotaDateStr(dateInput = new Date()) {
 // MongoDB Connections state
 let mongoClient: MongoClient | null = null;
 let mongoDb: Db | null = null;
+let connectionPromise: Promise<Db | null> | null = null;
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -175,26 +176,44 @@ async function seedMongoDatabase() {
   }
 }
 
-async function connectToMongo() {
+async function connectToMongo(): Promise<Db | null> {
   if (!MONGODB_URI) {
     console.log("[Droguería Backend] MONGODB_URI not found in environment. Using local db-store.json");
     return null;
   }
-  try {
-    console.log("[Droguería Backend] Connecting to MongoDB Atlas...");
-    const client = new MongoClient(MONGODB_URI);
-    await client.connect();
-    console.log("[Droguería Backend] Connected successfully to MongoDB Atlas.");
-    mongoClient = client;
-    mongoDb = client.db();
-    
-    // Seed DB
-    await seedMongoDatabase();
+
+  if (mongoDb) {
     return mongoDb;
-  } catch (err) {
-    console.error("[Droguería Backend] MongoDB connection failed. Falling back to local JSON store.", err);
-    return null;
   }
+
+  if (!connectionPromise) {
+    connectionPromise = (async () => {
+      try {
+        console.log("[Droguería Backend] Connecting to MongoDB Atlas...");
+        const client = new MongoClient(MONGODB_URI, {
+          maxPoolSize: 5,
+          minPoolSize: 1,
+          maxIdleTimeMS: 30000,
+          connectTimeoutMS: 10000,
+          socketTimeoutMS: 30000,
+        });
+        await client.connect();
+        console.log("[Droguería Backend] Connected successfully to MongoDB Atlas.");
+        mongoClient = client;
+        mongoDb = client.db();
+        
+        // Seed DB
+        await seedMongoDatabase();
+        return mongoDb;
+      } catch (err) {
+        console.error("[Droguería Backend] MongoDB connection failed. Falling back to local JSON store.", err);
+        connectionPromise = null; // Reset promise to allow retrying on next request
+        return null;
+      }
+    })();
+  }
+
+  return connectionPromise;
 }
 
 // Database Abstraction Helpers
@@ -694,8 +713,21 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Connect to MongoDB Atlas
+// Connect to MongoDB Atlas (starts connecting in the background)
 connectToMongo();
+
+// Middleware to guarantee MongoDB connection is ready before processing API requests
+app.use("/api", async (req, res, next) => {
+  if (MONGODB_URI && !mongoDb) {
+    console.log(`[Droguería Backend] API request ${req.method} ${req.path} waiting for MongoDB connection...`);
+    try {
+      await connectToMongo();
+    } catch (err) {
+      console.error("[Droguería Backend] Failed to connect to MongoDB in middleware:", err);
+    }
+  }
+  next();
+});
 
 // Root health check
 app.get("/api/health", (req, res) => {
