@@ -1032,7 +1032,7 @@ export default function InventarioTab() {
                           </div>
                            <div className="col-span-4">
                             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 flex items-center justify-between">
-                              <span>Escanear Código</span>
+                              <span>Escanear</span>
                               <button
                                 type="button"
                                 onClick={() => setShowBarcodeScannerForRestock(true)}
