@@ -1032,7 +1032,7 @@ export default function InventarioTab() {
                           </div>
                            <div className="col-span-4">
                             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 flex items-center justify-between">
-                              <span>Escanear / Buscar</span>
+                              <span>Escanear Código</span>
                               <button
                                 type="button"
                                 onClick={() => setShowBarcodeScannerForRestock(true)}
@@ -1044,26 +1044,14 @@ export default function InventarioTab() {
                             </label>
                             <input
                               type="text"
-                              placeholder="Código o nombre..."
+                              placeholder="Código..."
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                   e.preventDefault();
                                   const target = e.target as HTMLInputElement;
-                                  const query = target.value.trim();
-                                  if (query) {
-                                    // 1. Search by exact barcode match
-                                    let found = products.find(p => p.barcode === query);
-                                    
-                                    // 2. Fallback to name search (case insensitive)
-                                    if (!found) {
-                                      found = products.find(p => p.name.toLowerCase().includes(query.toLowerCase()));
-                                    }
-                                    
-                                    // 3. Fallback to barcode partial match (case insensitive)
-                                    if (!found) {
-                                      found = products.find(p => p.barcode && p.barcode.toLowerCase().includes(query.toLowerCase()));
-                                    }
-
+                                  const barcode = target.value.trim();
+                                  if (barcode) {
+                                    const found = products.find(p => p.barcode === barcode);
                                     if (found) {
                                       setRestockProductId(found.id);
                                       setRestockCost(found.cost);
@@ -1074,12 +1062,12 @@ export default function InventarioTab() {
                                       setRestockSkins(found.conversionFactor > 1 ? 1 : 0);
                                       target.value = "";
                                     } else {
-                                      alert(`No se encontró producto con código o nombre: ${query}`);
+                                      alert(`No se encontró producto con código: ${barcode}`);
                                     }
                                   }
                                 }
                               }}
-                              className="w-full px-2 py-2 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
+                              className="w-full px-2 py-2 border border-slate-250 bg-white rounded-md text-xs font-mono text-slate-900"
                             />
                           </div>
                         </div>
