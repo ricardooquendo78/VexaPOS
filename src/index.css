@@ -10,9 +10,10 @@
   html, body {
     background: #ffffff !important;
     color: #000000 !important;
-    font-family: 'Courier New', Courier, monospace !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif !important;
     font-size: 11px !important;
-    line-height: 1.2 !important;
+    font-weight: 600 !important; /* Hace las letras más gruesas para que la impresora térmica las queme más oscuras */
+    line-height: 1.25 !important;
     margin: 0 !important;
     padding: 0 !important;
     width: 80mm !important; /* Estándar de facturas de droguería */
@@ -43,22 +44,24 @@
 
   .ticket-title {
     font-size: 14px !important;
-    font-weight: bold !important;
+    font-weight: 800 !important; /* Extra negrita para los títulos */
     margin: 0 0 2px 0 !important;
   }
 
   .ticket-subtitle {
     font-size: 10px !important;
+    font-weight: 600 !important;
     margin: 0 0 2px 0 !important;
   }
 
   .ticket-divider {
-    border-top: 1px dashed #000000 !important;
+    border-top: 1.5px dashed #000000 !important; /* Líneas divisorias un poco más gruesas y visibles */
     margin: 6px 0 !important;
   }
 
   .ticket-info {
     font-size: 10px !important;
+    font-weight: 600 !important;
     margin-bottom: 6px !important;
   }
 
@@ -74,8 +77,8 @@
   }
 
   .ticket-table th {
-    border-bottom: 1px solid #000000 !important;
-    font-weight: bold !important;
+    border-bottom: 1.5px solid #000000 !important;
+    font-weight: 800 !important;
     padding-bottom: 3px !important;
     text-transform: uppercase !important;
   }
@@ -83,6 +86,7 @@
   .ticket-table td {
     padding: 3px 0 !important;
     vertical-align: top !important;
+    font-weight: 600 !important;
   }
 
   .text-left {
@@ -96,7 +100,7 @@
   .ticket-totals {
     font-size: 11px !important;
     margin-top: 6px !important;
-    border-top: 1px dashed #000000 !important;
+    border-top: 1.5px dashed #000000 !important;
     padding-top: 6px !important;
   }
 
@@ -104,13 +108,15 @@
     display: flex !important;
     justify-content: space-between !important;
     font-size: 12px !important;
+    font-weight: 800 !important;
   }
 
   .ticket-footer {
     text-align: center !important;
     font-size: 9px !important;
+    font-weight: 600 !important;
     margin-top: 15px !important;
-    border-top: 1px dashed #000000 !important;
+    border-top: 1.5px dashed #000000 !important;
     padding-top: 6px !important;
   }
 
