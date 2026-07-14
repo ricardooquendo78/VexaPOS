@@ -39,15 +39,26 @@ import CierreTab from './components/CierreTab';
 import ReportesTab from './components/ReportesTab';
 import PerfilTab from './components/PerfilTab';
 export function getBogotaDateStr(dateInput: Date = new Date()): string {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Bogota",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  });
-  const parts = formatter.formatToParts(dateInput);
-  const partMap = Object.fromEntries(parts.map(p => [p.type, p.value]));
-  return `${partMap.year}-${partMap.month}-${partMap.day}`;
+  try {
+    if (!dateInput || isNaN(dateInput.getTime())) {
+      dateInput = new Date();
+    }
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Bogota",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+    const parts = formatter.formatToParts(dateInput);
+    const partMap = Object.fromEntries(parts.map(p => [p.type, p.value]));
+    return `${partMap.year}-${partMap.month}-${partMap.day}`;
+  } catch (e) {
+    try {
+      return new Date().toISOString().split("T")[0];
+    } catch (err) {
+      return "2026-07-13";
+    }
+  }
 }
 
 export default function App() {
