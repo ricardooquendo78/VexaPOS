@@ -84,6 +84,18 @@ function loadDb(): AppState {
   return DEFAULT_STATE;
 }
 
+function getBogotaDateStr(dateInput = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const parts = formatter.formatToParts(dateInput);
+  const partMap = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  return `${partMap.year}-${partMap.month}-${partMap.day}`;
+}
+
 // MongoDB Connections state
 let mongoClient: MongoClient | null = null;
 let mongoDb: Db | null = null;
@@ -399,10 +411,75 @@ async function getClosures() {
 
 async function getClosure(date: string) {
   if (mongoDb) {
-    const doc = await mongoDb.collection("closures").findOne({ date, isClosed: false });
-    return computeFinalCash(doc);
+    let active: any = await mongoDb.collection("closures").findOne({ isClosed: false });
+    
+    if (active) {
+      if (active.date !== date) {
+        // Cierre automático: el día cambió
+        active.isClosed = true;
+        active.closedAt = new Date().toISOString();
+        const { _id, ...rest } = active;
+        await mongoDb.collection("closures").updateOne({ id: active.id }, { $set: rest });
+        active = null;
+      }
+    }
+    
+    if (!active) {
+      const closedToday = await mongoDb.collection("closures").findOne({ date, isClosed: true });
+      if (closedToday) {
+        return computeFinalCash(closedToday);
+      }
+      
+      active = {
+        id: "close-" + date,
+        date,
+        totalSalesCount: 0,
+        totalSalesRevenue: 0,
+        totalExpenses: 0,
+        initialCash: 100000,
+        finalCash: 100000,
+        expenses: [],
+        isClosed: false
+      };
+      await mongoDb.collection("closures").insertOne({ ...active } as any);
+    }
+    
+    return computeFinalCash(active);
   }
-  return computeFinalCash(loadDb().closures.find(c => c.date === date && !c.isClosed));
+  
+  const db = loadDb();
+  let active = db.closures.find(c => !c.isClosed);
+  if (active) {
+    if (active.date !== date) {
+      active.isClosed = true;
+      active.closedAt = new Date().toISOString();
+      active = null;
+      saveDb(db);
+    }
+  }
+  
+  if (!active) {
+    const closedToday = db.closures.find(c => c.date === date && c.isClosed);
+    if (closedToday) {
+      return computeFinalCash(closedToday);
+    }
+    
+    active = {
+      id: "close-" + date,
+      date,
+      totalSalesCount: 0,
+      totalSalesRevenue: 0,
+      totalExpenses: 0,
+      initialCash: 100000,
+      finalCash: 100000,
+      expenses: [],
+      isClosed: false
+    };
+    db.closures.push(active);
+    saveDb(db);
+  }
+  
+  return computeFinalCash(active);
 }
 
 async function getClosedToday(date: string) {
@@ -932,7 +1009,7 @@ app.post("/api/sales", async (req, res) => {
   await addSale(newInvoice);
 
   // Daily cash balance increment
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getBogotaDateStr();
   await incrementClosureTotals(todayStr, total, 1);
 
   res.status(201).json({ success: true, invoice: newInvoice });
@@ -945,7 +1022,7 @@ app.get("/api/sales", async (req, res) => {
 
 // Daily cash closure management
 app.get("/api/closure", async (req, res) => {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getBogotaDateStr();
   let active = await getClosure(todayStr);
   if (!active) {
     const closedToday = await getClosedToday(todayStr);
@@ -968,7 +1045,7 @@ app.get("/api/closure", async (req, res) => {
 });
 
 app.post("/api/closure/expense", async (req, res) => {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getBogotaDateStr();
   const { description, amount } = req.body;
 
   if (!description || !amount) {
@@ -983,7 +1060,7 @@ app.post("/api/closure/expense", async (req, res) => {
 });
 
 app.post("/api/closure/close", async (req, res) => {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getBogotaDateStr();
   const closure = await getClosure(todayStr);
 
   if (!closure) {
@@ -1017,7 +1094,7 @@ app.post("/api/sync", async (req, res) => {
     const { type, entity, data, timestamp } = action;
     
     if (entity === "expense") {
-      const todayStr = new Date(timestamp).toISOString().split("T")[0];
+      const todayStr = getBogotaDateStr(new Date(timestamp));
       const expObj = { id: data.id || "exp-" + Date.now(), description: data.description, amount: Number(data.amount), timestamp };
       await addExpenseToClosure(todayStr, expObj);
       logs.push(`Gasto sincronizado exitosamente: "${data.description}" por $${data.amount}`);
@@ -1044,7 +1121,7 @@ app.post("/api/sync", async (req, res) => {
       };
       await addSale(newSale);
 
-      const todayStr = new Date(timestamp).toISOString().split("T")[0];
+      const todayStr = getBogotaDateStr(new Date(timestamp));
       await incrementClosureTotals(todayStr, data.total, 1);
       logs.push(`Factura ${invoiceNo} por $${data.total} sincronizada correctamente.`);
     }

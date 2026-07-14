@@ -38,6 +38,17 @@ import FacturacionTab from './components/FacturacionTab';
 import CierreTab from './components/CierreTab';
 import ReportesTab from './components/ReportesTab';
 import PerfilTab from './components/PerfilTab';
+export function getBogotaDateStr(dateInput: Date = new Date()): string {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const parts = formatter.formatToParts(dateInput);
+  const partMap = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  return `${partMap.year}-${partMap.month}-${partMap.day}`;
+}
 
 export default function App() {
 // Offline state simulator representation
@@ -84,7 +95,7 @@ export default function App() {
   const [closures, setClosures] = useState<DailyClosure[]>([]);
   const [activeClosure, setActiveClosure] = useState<DailyClosure>({
     id: "close-today",
-    date: new Date().toISOString().split("T")[0],
+    date: getBogotaDateStr(),
     totalSalesCount: 0,
     totalSalesRevenue: 0,
     totalExpenses: 0,
@@ -1083,28 +1094,8 @@ export default function App() {
     setExpenseAmount(0);
   };
 
-  // Complete Shift / Cierre de Caja
-  const handleFinalizeClosure = async () => {
-    if (window.confirm("¿Está seguro de que desea realizar el cierre financiero diario del mostrador? Esto bloqueará las transacciones correspondientes.")) {
-      try {
-        if (isOffline) {
-          alert("Alerta: El cierre diario completo no puede completarse sin conexión. Sincronice antes de cerrar el balance diurno.");
-          return;
-        }
-
-        const resp = await fetch("/api/closure/close", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" }
-        });
-        if (resp.ok) {
-          alert("Cierre finalizado exitosamente. Carga financiera re-generada.");
-          fetchInitialData();
-        }
-      } catch (err) {
-        alert("Fallo de red al intentar consolidar cierre.");
-      }
-    }
-  };
+  // Complete Shift / Cierre de Caja (No-op as it is now processed automatically on day end)
+  const handleFinalizeClosure = async () => {};
 
   // Profile management trigger updates
   const handleUpdateBusinessProfile = async (e: React.FormEvent) => {

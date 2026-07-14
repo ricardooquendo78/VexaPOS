@@ -164,14 +164,10 @@ export default function CierreTab() {
                       </div>
                     </div>
 
-                    <div className="border-t pt-4 space-y-3">
-                      <span className="block text-[11px] text-slate-500 text-center">Una vez realizado el cierre final, la caja de mostrador se re-inicia con la base autorizada de $120.000 COP</span>
-                      <button
-                        onClick={handleFinalizeClosure}
-                        className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg text-xs font-bold shadow-sm"
-                      >
-                        Consolidar Cierre Financiero del Día
-                      </button>
+                    <div className="border-t pt-4 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                      <span className="block text-[11px] text-teal-850 font-medium text-center">
+                        ℹ️ El cierre de caja se realiza automáticamente a la medianoche (12:00 PM, hora de Bogotá). El balance diurno se reinicia al iniciar el nuevo día con la base autorizada de $100.000 COP.
+                      </span>
                     </div>
 
                   </div>
