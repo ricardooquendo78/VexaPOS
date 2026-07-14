@@ -100,9 +100,12 @@ function getBogotaDateStr(dateInput = new Date()) {
     return `${partMap.year}-${partMap.month}-${partMap.day}`;
   } catch (e) {
     try {
-      return new Date().toISOString().split("T")[0];
+      // Fallback manual adjustment for UTC-5 (Colombia time)
+      const offsetMs = -5 * 60 * 60 * 1000;
+      const bogotaTime = new Date(dateInput.getTime() + offsetMs);
+      return bogotaTime.toISOString().split("T")[0];
     } catch (err) {
-      return "2026-07-13";
+      return "2026-07-14";
     }
   }
 }
