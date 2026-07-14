@@ -36,6 +36,7 @@ interface AppState {
   sales: any[];
   closures: any[];
   syncStatus: string;
+  supplierInvoices?: any[];
 }
 
 const DEFAULT_STATE: AppState = {
@@ -302,6 +303,27 @@ async function addSupplier(supplier: any) {
   }
   const db = loadDb();
   db.suppliers.push(supplier);
+  saveDb(db);
+}
+
+async function getSupplierInvoices() {
+  if (mongoDb) {
+    return await mongoDb.collection("supplier_invoices").find({}).toArray();
+  }
+  const db = loadDb();
+  return db.supplierInvoices || [];
+}
+
+async function addSupplierInvoice(invoice: any) {
+  if (mongoDb) {
+    await mongoDb.collection("supplier_invoices").insertOne(invoice);
+    return;
+  }
+  const db = loadDb();
+  if (!db.supplierInvoices) {
+    db.supplierInvoices = [];
+  }
+  db.supplierInvoices.push(invoice);
   saveDb(db);
 }
 
@@ -856,6 +878,8 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
   }
 
   let updatedCount = 0;
+  let totalInvoiceCost = 0;
+  const productsList = await getProducts();
 
   for (const item of items) {
     const { productId, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate } = item;
@@ -872,15 +896,50 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
         Number(quantityUnits) || 0,
         overrideFields
       );
+      
       if (success) {
         updatedCount++;
+        const p = productsList.find(prod => prod.id === productId);
+        if (p) {
+          const factor = p.conversionFactor || 1;
+          const itemSkins = Number(quantitySkins) || 0;
+          const itemUnits = Number(quantityUnits) || 0;
+          const itemCost = Number(cost) || p.cost || 0;
+          totalInvoiceCost += itemCost * (itemSkins + (factor > 1 ? (itemUnits / factor) : 0));
+        }
       }
     } catch (err) {
       console.error(`Error al cargar inventario para el producto ${productId}:`, err);
     }
   }
 
+  if (updatedCount > 0 && totalInvoiceCost > 0) {
+    try {
+      const suppliersList = await getSuppliers();
+      const supplier = suppliersList.find(s => s.id === supplierId);
+      const supplierName = supplier ? supplier.companyName : "Proveedor";
+      const todayStr = getBogotaDateStr();
+      
+      const supplierInvoiceObj = {
+        id: "sup-inv-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+        supplierId: supplierId || "unknown",
+        supplierName,
+        date: todayStr,
+        totalCost: Math.round(totalInvoiceCost),
+        timestamp: new Date().toISOString()
+      };
+      await addSupplierInvoice(supplierInvoiceObj);
+    } catch (err) {
+      console.error("Error saving supplier invoice record:", err);
+    }
+  }
+
   res.json({ success: true, count: updatedCount });
+});
+
+app.get("/api/inventory/invoices/history", async (req, res) => {
+  const invoicesList = await getSupplierInvoices();
+  res.json(invoicesList);
 });
 
 // Manage suppliers, labs, categories
@@ -1160,6 +1219,8 @@ app.post("/api/sync", async (req, res) => {
     else if (entity === "restock" || entity === "invoice_bulk") {
       const itemsToProcess = Array.isArray(data.items) ? data.items : [data];
       let restockedCount = 0;
+      let totalInvoiceCost = 0;
+      
       for (const item of itemsToProcess) {
         try {
           const overrideFields: any = {};
@@ -1176,12 +1237,42 @@ app.post("/api/sync", async (req, res) => {
           );
           if (success) {
             restockedCount++;
+            const p = productsList.find(prod => prod.id === item.productId);
+            if (p) {
+              const factor = p.conversionFactor || 1;
+              const itemSkins = Number(item.quantitySkins) || 0;
+              const itemUnits = Number(item.quantityUnits) || 0;
+              const itemCost = Number(item.cost) || p.cost || 0;
+              totalInvoiceCost += itemCost * (itemSkins + (factor > 1 ? (itemUnits / factor) : 0));
+            }
           }
         } catch (err) {
           console.error(`Error deconcurrente al cargar inventario offline para el producto ${item.productId}:`, err);
         }
       }
-      logs.push(`Servidor: Se sincronizó cargue de inventario offline (${restockedCount} productos procesados).`);
+      
+      if (restockedCount > 0 && totalInvoiceCost > 0) {
+        try {
+          const suppliersList = await getSuppliers();
+          const supplier = suppliersList.find(s => s.id === data.supplierId);
+          const supplierName = supplier ? supplier.companyName : "Proveedor";
+          const invoiceDate = getBogotaDateStr(new Date(timestamp));
+          
+          const supplierInvoiceObj = {
+            id: "sup-inv-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+            supplierId: data.supplierId || "unknown",
+            supplierName,
+            date: invoiceDate,
+            totalCost: Math.round(totalInvoiceCost),
+            timestamp: timestamp
+          };
+          await addSupplierInvoice(supplierInvoiceObj);
+        } catch (err) {
+          console.error("Error saving synced supplier invoice record:", err);
+        }
+      }
+      
+      logs.push(`Servidor: Se sincronizó cargue de inventario offline (${restockedCount} productos procesados con costo total $${Math.round(totalInvoiceCost)}).`);
     }
   }
 
