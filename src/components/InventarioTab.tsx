@@ -11,6 +11,7 @@ export default function InventarioTab() {
   const [showBarcodeScannerForNewProduct, setShowBarcodeScannerForNewProduct] = React.useState(false);
   const [showBarcodeScannerForRestock, setShowBarcodeScannerForRestock] = React.useState(false);
   const [profitPercentage, setProfitPercentage] = React.useState<string>("");
+  const [showNewSupplierModal, setShowNewSupplierModal] = React.useState(false);
 
   const onSubmitProductForm = async (e: React.FormEvent) => {
     if (!newProdName || !newProdLab || !newProdCategory) {
@@ -889,17 +890,28 @@ export default function InventarioTab() {
                     <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Proveedor de Origen *</label>
-                        <select
-                          required
-                          value={restockSupplierId}
-                          onChange={(e) => setRestockSupplierId(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-250 bg-white rounded-md text-xs font-semibold"
-                        >
-                          <option value="">Seleccione el proveedor...</option>
-                          {suppliers.map(sup => (
-                            <option key={sup.id} value={sup.id}>{sup.companyName} {sup.nit ? `(NIT: ${sup.nit})` : ''}</option>
-                          ))}
-                        </select>
+                        <div className="flex gap-2">
+                          <select
+                            required
+                            value={restockSupplierId}
+                            onChange={(e) => setRestockSupplierId(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-slate-250 bg-white rounded-md text-xs font-semibold"
+                          >
+                            <option value="">Seleccione el proveedor...</option>
+                            {suppliers.map(sup => (
+                              <option key={sup.id} value={sup.id}>{sup.companyName} {sup.nit ? `(NIT: ${sup.nit})` : ''}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => setShowNewSupplierModal(true)}
+                            className="px-3 py-2 bg-slate-900 hover:bg-slate-950 text-white rounded-md text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                            title="Crear Nuevo Proveedor"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Nuevo</span>
+                          </button>
+                        </div>
                       </div>
                       <div className="flex flex-col justify-end">
                         <p className="text-[11px] text-slate-500 leading-normal">
@@ -1975,6 +1987,96 @@ export default function InventarioTab() {
                   className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow-xs"
                 >
                   Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showNewSupplierModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full overflow-hidden flex flex-col transform scale-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-slate-150 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="font-black text-slate-900 text-sm uppercase tracking-wide">Crear Nuevo Proveedor</h3>
+                <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Ingresa los datos para registrar un distribuidor nuevo en el sistema.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewSupplierModal(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                await handleCreateSupplier(e);
+                setShowNewSupplierModal(false);
+              }}
+              className="p-5 space-y-4"
+            >
+              <div>
+                <label className="block text-[10.5px] font-bold text-slate-600 uppercase tracking-wider mb-1">Nombre de la Empresa *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Distribuidora Medix..."
+                  value={newSupName}
+                  onChange={(e) => setNewSupName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900 placeholder:font-normal"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10.5px] font-bold text-slate-600 uppercase tracking-wider mb-1">NIT de la Empresa</label>
+                <input
+                  type="text"
+                  placeholder="Ej: 900.123.456-1..."
+                  value={newSupNit}
+                  onChange={(e) => setNewSupNit(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900 placeholder:font-normal"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-600 uppercase tracking-wider mb-1">Teléfono</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 3001234567..."
+                    value={newSupPhone}
+                    onChange={(e) => setNewSupPhone(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900 placeholder:font-normal"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-600 uppercase tracking-wider mb-1">WhatsApp</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 3001234567..."
+                    value={newSupWsp}
+                    onChange={(e) => setNewSupWsp(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900 placeholder:font-normal"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-150">
+                <button
+                  type="button"
+                  onClick={() => setShowNewSupplierModal(false)}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-950 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
+                >
+                  Registrar Proveedor
                 </button>
               </div>
             </form>
