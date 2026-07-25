@@ -587,74 +587,66 @@ async function getNextInvoiceNumber(): Promise<string> {
 }
 
 async function adjustProductStock(productId: string, skinChange: number, unitChange: number, overrideFields?: { cost?: number, price?: number, priceUnits?: number, expirationDate?: string }): Promise<boolean> {
-  const maxRetries = 10;
-  for (let i = 0; i < maxRetries; i++) {
-    let currentSkins = 0;
-    let currentUnits = 0;
-    let conversionFactor = 1;
+  let currentSkins = 0;
+  let currentUnits = 0;
+  let conversionFactor = 1;
 
-    if (mongoDb) {
-      const prod = await mongoDb.collection("products").findOne({ id: productId });
-      if (!prod) return false;
-      currentSkins = prod.quantityOnSkins || 0;
-      currentUnits = prod.quantityUnits || 0;
-      conversionFactor = prod.conversionFactor || 1;
-    } else {
-      const db = loadDb();
-      const prod = db.products.find(p => p.id === productId);
-      if (!prod) return false;
-      currentSkins = prod.quantityOnSkins || 0;
-      currentUnits = prod.quantityUnits || 0;
-      conversionFactor = prod.conversionFactor || 1;
-    }
-
-    const totalUnitsInStock = (currentSkins * conversionFactor) + currentUnits;
-    const totalUnitsChange = (skinChange * conversionFactor) + unitChange;
-    const remainingTotalUnits = Math.max(0, totalUnitsInStock + totalUnitsChange);
-
-    let newSkins = 0;
-    let newUnits = 0;
-    if (conversionFactor > 1) {
-      newSkins = Math.floor(remainingTotalUnits / conversionFactor);
-      newUnits = remainingTotalUnits % conversionFactor;
-    } else {
-      newSkins = remainingTotalUnits;
-      newUnits = 0;
-    }
-
-    const updatedFields: any = {
-      quantityOnSkins: newSkins,
-      quantityUnits: newUnits
-    };
-
-    if (overrideFields) {
-      if (overrideFields.cost !== undefined) updatedFields.cost = overrideFields.cost;
-      if (overrideFields.price !== undefined) updatedFields.price = overrideFields.price;
-      if (overrideFields.priceUnits !== undefined) updatedFields.priceUnits = overrideFields.priceUnits;
-      if (overrideFields.expirationDate !== undefined) updatedFields.expirationDate = overrideFields.expirationDate;
-    }
-
-    if (mongoDb) {
-      const res = await mongoDb.collection("products").updateOne(
-        { id: productId, quantityOnSkins: currentSkins, quantityUnits: currentUnits },
-        { $set: updatedFields }
-      );
-      if (res.modifiedCount > 0) {
-        return true;
-      }
-      // Concurrent update collision: wait and retry with random jitter
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 80 + 20));
-    } else {
-      const db = loadDb();
-      const idx = db.products.findIndex(p => p.id === productId);
-      if (idx !== -1) {
-        db.products[idx] = { ...db.products[idx], ...updatedFields };
-        saveDb(db);
-      }
-      return true;
-    }
+  if (mongoDb) {
+    const prod = await mongoDb.collection("products").findOne({ id: productId });
+    if (!prod) return false;
+    currentSkins = prod.quantityOnSkins || 0;
+    currentUnits = prod.quantityUnits || 0;
+    conversionFactor = prod.conversionFactor || 1;
+  } else {
+    const db = loadDb();
+    const prod = db.products.find(p => p.id === productId);
+    if (!prod) return false;
+    currentSkins = prod.quantityOnSkins || 0;
+    currentUnits = prod.quantityUnits || 0;
+    conversionFactor = prod.conversionFactor || 1;
   }
-  throw new Error(`Failed to adjust stock for product ${productId} after ${maxRetries} retries due to concurrent updates.`);
+
+  const totalUnitsInStock = (currentSkins * conversionFactor) + currentUnits;
+  const totalUnitsChange = (skinChange * conversionFactor) + unitChange;
+  const remainingTotalUnits = Math.max(0, totalUnitsInStock + totalUnitsChange);
+
+  let newSkins = 0;
+  let newUnits = 0;
+  if (conversionFactor > 1) {
+    newSkins = Math.floor(remainingTotalUnits / conversionFactor);
+    newUnits = remainingTotalUnits % conversionFactor;
+  } else {
+    newSkins = remainingTotalUnits;
+    newUnits = 0;
+  }
+
+  const updatedFields: any = {
+    quantityOnSkins: newSkins,
+    quantityUnits: newUnits
+  };
+
+  if (overrideFields) {
+    if (overrideFields.cost !== undefined) updatedFields.cost = overrideFields.cost;
+    if (overrideFields.price !== undefined) updatedFields.price = overrideFields.price;
+    if (overrideFields.priceUnits !== undefined) updatedFields.priceUnits = overrideFields.priceUnits;
+    if (overrideFields.expirationDate !== undefined) updatedFields.expirationDate = overrideFields.expirationDate;
+  }
+
+  if (mongoDb) {
+    const res = await mongoDb.collection("products").updateOne(
+      { id: productId },
+      { $set: updatedFields }
+    );
+    return res.matchedCount > 0;
+  } else {
+    const db = loadDb();
+    const idx = db.products.findIndex(p => p.id === productId);
+    if (idx !== -1) {
+      db.products[idx] = { ...db.products[idx], ...updatedFields };
+      saveDb(db);
+    }
+    return true;
+  }
 }
 
 async function deductProductStock(productId: string, deductSkins: number, deductUnits: number): Promise<boolean> {
