@@ -467,7 +467,7 @@ export default function FacturacionTab() {
                   <div className="w-full md:max-w-xs bg-slate-50 p-4 rounded-xl border border-slate-150 space-y-2">
                     <div className="flex justify-between text-xs text-slate-500">
                       <span>Subtotal Neto</span>
-                      <span>${calculateCartTotals().toLocaleString("es-CO")} COP</span>
+                      <span>${calculateCartTotals().subtotal.toLocaleString("es-CO")} COP</span>
                     </div>
                     <div className="flex justify-between text-xs text-slate-500 font-sans">
                       <span>IVA Incluido (Medicamentos)</span>
@@ -475,7 +475,7 @@ export default function FacturacionTab() {
                     </div>
                     <div className="flex justify-between items-center text-sm font-black border-t pt-2.5 border-slate-200">
                       <span className="text-slate-900 text-[11px] uppercase tracking-wider font-bold">TOTAL VENTA</span>
-                      <span className="text-teal-700 text-lg font-bold">${calculateCartTotals().toLocaleString("es-CO")} COP</span>
+                      <span className="text-teal-700 text-lg font-bold">${calculateCartTotals().total.toLocaleString("es-CO")} COP</span>
                     </div>
                   </div>
 
@@ -484,16 +484,18 @@ export default function FacturacionTab() {
                 {/* Actions */}
                 <div className="flex justify-end gap-3 pt-2">
                   <button
+                    type="button"
                     onClick={() => setShowInvoicePreview(true)}
-                    className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-2 border border-slate-200 transition"
+                    className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-2 border border-slate-200 transition cursor-pointer"
                   >
                     <Printer className="w-4 h-4" />
                     <span>Vista Previa Impresión</span>
                   </button>
 
                   <button
-                    onClick={handleCheckoutSale}
-                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-2"
+                    type="button"
+                    onClick={() => handleCheckoutSale("Efectivo", invoiceClientNit)}
+                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-2 cursor-pointer"
                   >
                     <CreditCard className="w-4 h-4" />
                     <span>Registrar Factura</span>
@@ -569,7 +571,7 @@ export default function FacturacionTab() {
                   <div className="border-t border-dashed pt-2 space-y-1">
                     <div className="flex justify-between font-black text-[13px] text-slate-900">
                       <span>TOTAL NETO COP</span>
-                      <span>${calculateCartTotals().toLocaleString("es-CO")} COP</span>
+                      <span>${calculateCartTotals().total.toLocaleString("es-CO")} COP</span>
                     </div>
                   </div>
 
@@ -582,13 +584,15 @@ export default function FacturacionTab() {
 
                 <div className="p-4 bg-slate-50 border-t flex justify-end gap-2 text-xs">
                   <button
+                    type="button"
                     onClick={() => setShowInvoicePreview(false)}
                     className="px-4 py-2 border rounded-lg hover:bg-slate-100 transition"
                   >
                     Regresar
                   </button>
                   <button
-                    onClick={handleCheckoutSale}
+                    type="button"
+                    onClick={() => handleCheckoutSale("Efectivo", invoiceClientNit)}
                     className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold transition"
                   >
                     Autorizar e Imprimir Venta

@@ -537,7 +537,7 @@ async function addSale(sale: any) {
 
 function computeFinalCash(closure: any) {
   if (!closure) return closure;
-  const initialCash = closure.initialCash !== undefined ? closure.initialCash : 100000;
+  const initialCash = closure.initialCash !== undefined ? closure.initialCash : 0;
   const totalSalesRevenue = closure.totalSalesRevenue || 0;
   const totalExpenses = closure.totalExpenses || 0;
   closure.finalCash = initialCash + totalSalesRevenue - totalExpenses;
@@ -583,8 +583,8 @@ async function getClosure(date: string) {
       totalSalesCount: 0,
       totalSalesRevenue: 0,
       totalExpenses: 0,
-      initialCash: 100000,
-      finalCash: 100000,
+      initialCash: 0,
+      finalCash: 0,
       expenses: [],
       isClosed: shouldBeClosed,
       ...(shouldBeClosed ? { closedAt: new Date().toISOString() } : {})
@@ -620,8 +620,8 @@ async function getClosure(date: string) {
     totalSalesCount: 0,
     totalSalesRevenue: 0,
     totalExpenses: 0,
-    initialCash: 100000,
-    finalCash: 100000,
+    initialCash: 0,
+    finalCash: 0,
     expenses: [],
     isClosed: shouldBeClosed,
     ...(shouldBeClosed ? { closedAt: new Date().toISOString() } : {})
@@ -1212,16 +1212,20 @@ app.delete("/api/inventory/manage/categories", async (req, res) => {
 
 // Register POS Sales (facturación)
 app.post("/api/sales", async (req, res) => {
-  const { sellerId, sellerName, items, total, clientNit } = req.body;
+  const { sellerId, sellerName, items, total, totalAmount, clientNit, dateTime, timestamp } = req.body;
 
   if (!items || items.length === 0) {
     return res.status(400).json({ success: false, message: "No hay productos en la factura." });
   }
 
+  const finalTotal = Number(total !== undefined ? total : totalAmount) || 0;
+
   // Process product stock reduction
   for (const item of items) {
     try {
-      await deductProductStock(item.productId, item.quantitySkins || 0, item.quantityUnits || 0);
+      const skins = Number(item.quantitySkins ?? item.qtySkins) || 0;
+      const units = Number(item.quantityUnits ?? item.qtyUnits) || 0;
+      await deductProductStock(item.productId, skins, units);
     } catch (err) {
       console.error(`Error deconcurrente al deducir inventario para el producto ${item.productId}:`, err);
     }
@@ -1229,21 +1233,31 @@ app.post("/api/sales", async (req, res) => {
 
   const nextInvoiceNo = await getNextInvoiceNumber();
   const newInvoice = {
-    id: "sale-" + Date.now(),
-    invoiceNumber: nextInvoiceNo,
-    dateTime: new Date().toISOString(),
+    id: req.body.id || ("sale-" + Date.now()),
+    invoiceNumber: req.body.invoiceNumber || nextInvoiceNo,
+    dateTime: dateTime || timestamp || new Date().toISOString(),
+    timestamp: timestamp || dateTime || new Date().toISOString(),
     sellerId: sellerId || "anonymous",
     sellerName: sellerName || "Vendedor",
-    items,
-    total,
-    clientNit: clientNit || ""
+    items: items.map((it: any) => ({
+      ...it,
+      quantitySkins: Number(it.quantitySkins ?? it.qtySkins) || 0,
+      quantityUnits: Number(it.quantityUnits ?? it.qtyUnits) || 0,
+      qtySkins: Number(it.qtySkins ?? it.quantitySkins) || 0,
+      qtyUnits: Number(it.qtyUnits ?? it.quantityUnits) || 0,
+      subtotal: Number(it.subtotal ?? it.total) || 0
+    })),
+    total: finalTotal,
+    totalAmount: finalTotal,
+    clientNit: clientNit || "",
+    paymentMethod: req.body.paymentMethod || "Efectivo"
   };
 
   await addSale(newInvoice);
 
   // Daily cash balance increment
   const todayStr = getBogotaDateStr();
-  await incrementClosureTotals(todayStr, total, 1);
+  await incrementClosureTotals(todayStr, finalTotal, 1);
 
   res.status(201).json({ success: true, invoice: newInvoice });
 });
@@ -1268,8 +1282,8 @@ app.get("/api/closure", async (req, res) => {
       totalSalesCount: 0,
       totalSalesRevenue: 0,
       totalExpenses: 0,
-      initialCash: 100000,
-      finalCash: 100000,
+      initialCash: 0,
+      finalCash: 0,
       expenses: [],
       isClosed: false
     };
@@ -1333,9 +1347,12 @@ app.post("/api/sync", async (req, res) => {
       logs.push(`Gasto sincronizado exitosamente: "${data.description}" por $${data.amount}`);
     }
     else if (entity === "sale") {
-      for (const item of data.items) {
+      const finalTotal = Number(data.total !== undefined ? data.total : data.totalAmount) || 0;
+      for (const item of (data.items || [])) {
         try {
-          await deductProductStock(item.productId, item.quantitySkins || 0, item.quantityUnits || 0);
+          const skins = Number(item.quantitySkins ?? item.qtySkins) || 0;
+          const units = Number(item.quantityUnits ?? item.qtyUnits) || 0;
+          await deductProductStock(item.productId, skins, units);
         } catch (err) {
           console.error(`Error deconcurrente al deducir inventario offline para el producto ${item.productId}:`, err);
         }
@@ -1345,18 +1362,28 @@ app.post("/api/sync", async (req, res) => {
       const newSale = {
         id: data.id || "sale-" + Date.now(),
         invoiceNumber: invoiceNo,
-        dateTime: timestamp,
-        sellerId: data.sellerId,
-        sellerName: data.sellerName,
-        items: data.items,
-        total: data.total,
-        clientNit: data.clientNit || ""
+        dateTime: data.dateTime || data.timestamp || timestamp || new Date().toISOString(),
+        timestamp: data.timestamp || data.dateTime || timestamp || new Date().toISOString(),
+        sellerId: data.sellerId || "anonymous",
+        sellerName: data.sellerName || "Vendedor",
+        items: (data.items || []).map((it: any) => ({
+          ...it,
+          quantitySkins: Number(it.quantitySkins ?? it.qtySkins) || 0,
+          quantityUnits: Number(it.quantityUnits ?? it.qtyUnits) || 0,
+          qtySkins: Number(it.qtySkins ?? it.quantitySkins) || 0,
+          qtyUnits: Number(it.qtyUnits ?? it.quantityUnits) || 0,
+          subtotal: Number(it.subtotal ?? it.total) || 0
+        })),
+        total: finalTotal,
+        totalAmount: finalTotal,
+        clientNit: data.clientNit || "",
+        paymentMethod: data.paymentMethod || "Efectivo"
       };
       await addSale(newSale);
 
       const todayStr = getBogotaDateStr(new Date(timestamp));
-      await incrementClosureTotals(todayStr, data.total, 1);
-      logs.push(`Factura ${invoiceNo} por $${data.total} sincronizada correctamente.`);
+      await incrementClosureTotals(todayStr, finalTotal, 1);
+      logs.push(`Factura ${invoiceNo} por $${finalTotal.toLocaleString("es-CO")} sincronizada correctamente.`);
     }
     else if (entity === "product") {
       const prodExists = productsList.some(p => p.id === data.id || p.name.toLowerCase() === data.name.toLowerCase());

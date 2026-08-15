@@ -110,8 +110,8 @@ export default function App() {
     totalSalesCount: 0,
     totalSalesRevenue: 0,
     totalExpenses: 0,
-    initialCash: 100000,
-    finalCash: 100000,
+    initialCash: 0,
+    finalCash: 0,
     expenses: [],
     isClosed: false
   });
@@ -986,14 +986,27 @@ export default function App() {
   const calculateCartTotals = () => {
     let subtotal = 0;
     posCart.forEach(item => {
-      const skins = item.qtySkins || 0;
-      const units = item.qtyUnits || 0;
-      const pricePerSkin = item.customPrice !== undefined ? item.customPrice : item.product.price;
-      const factor = item.product.conversionFactor || 1;
+      const skins = Number(item.qtySkins) || 0;
+      const units = Number(item.qtyUnits) || 0;
+      const pricePerSkin = item.customPrice !== undefined ? Number(item.customPrice) : Number(item.product.price);
+      const factor = Number(item.product.conversionFactor) || 1;
       
-      const pricePerUnit = item.product.priceUnits && item.product.priceUnits > 0 
-        ? item.product.priceUnits 
-        : (factor > 1 ? (pricePerSkin / factor) : pricePerSkin);
+      let pricePerUnit = 0;
+      if (factor > 1) {
+        if (item.product.priceUnits && Number(item.product.priceUnits) > 0) {
+          const baseEnvelopePrice = Number(item.product.price) || 0;
+          if (baseEnvelopePrice > 0 && pricePerSkin !== baseEnvelopePrice) {
+            const ratio = pricePerSkin / baseEnvelopePrice;
+            pricePerUnit = Math.round(Number(item.product.priceUnits) * ratio);
+          } else {
+            pricePerUnit = Number(item.product.priceUnits);
+          }
+        } else {
+          pricePerUnit = Math.round(pricePerSkin / factor);
+        }
+      } else {
+        pricePerUnit = pricePerSkin;
+      }
 
       subtotal += (skins * pricePerSkin) + (units * pricePerUnit);
     });
@@ -1005,7 +1018,7 @@ export default function App() {
   };
 
   // POS Checkout (Create Sale)
-  const handleCheckoutSale = async (paymentMethod: "Efectivo" | "Tarjeta" | "Transferencia", clientNit?: string) => {
+  const handleCheckoutSale = async (paymentMethod: "Efectivo" | "Tarjeta" | "Transferencia" = "Efectivo", clientNit?: string) => {
     if (posCart.length === 0) {
       alert("El carrito de compras está vacío.");
       return;
@@ -1013,33 +1026,56 @@ export default function App() {
 
     const { total } = calculateCartTotals();
     const invoiceNum = "FAC-" + Date.now().toString().slice(-6);
+    const validPaymentMethod = (typeof paymentMethod === "string" && ["Efectivo", "Tarjeta", "Transferencia"].includes(paymentMethod))
+      ? paymentMethod
+      : "Efectivo";
+    const validClientNit = (typeof clientNit === "string" ? clientNit : invoiceClientNit) || undefined;
 
     const salePayload = {
       id: "sale-" + Date.now(),
       invoiceNumber: invoiceNum,
+      dateTime: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      sellerId: currentUser?.id || "admin",
+      sellerName: currentUser?.name || "Vendedor Gratamira",
       items: posCart.map(c => {
-        const factor = c.product.conversionFactor || 1;
-        const pricePerSkin = c.customPrice !== undefined ? c.customPrice : c.product.price;
-        const pricePerUnit = c.product.priceUnits && c.product.priceUnits > 0 
-          ? c.product.priceUnits 
-          : (factor > 1 ? (pricePerSkin / factor) : pricePerSkin);
+        const factor = Number(c.product.conversionFactor) || 1;
+        const pricePerSkin = c.customPrice !== undefined ? Number(c.customPrice) : Number(c.product.price);
+        let pricePerUnit = 0;
+        if (factor > 1) {
+          if (c.product.priceUnits && Number(c.product.priceUnits) > 0) {
+            const baseEnvelopePrice = Number(c.product.price) || 0;
+            if (baseEnvelopePrice > 0 && pricePerSkin !== baseEnvelopePrice) {
+              const ratio = pricePerSkin / baseEnvelopePrice;
+              pricePerUnit = Math.round(Number(c.product.priceUnits) * ratio);
+            } else {
+              pricePerUnit = Number(c.product.priceUnits);
+            }
+          } else {
+            pricePerUnit = Math.round(pricePerSkin / factor);
+          }
+        } else {
+          pricePerUnit = pricePerSkin;
+        }
         const itemSubtotal = (c.qtySkins * pricePerSkin) + (c.qtyUnits * pricePerUnit);
 
         return {
           productId: c.product.id,
           productName: c.product.name,
+          quantitySkins: c.qtySkins,
+          quantityUnits: c.qtyUnits,
           qtySkins: c.qtySkins,
           qtyUnits: c.qtyUnits,
           priceSkins: pricePerSkin,
           priceUnits: pricePerUnit,
+          price: pricePerSkin,
           subtotal: Math.round(itemSubtotal)
         };
       }),
+      total: total,
       totalAmount: total,
-      paymentMethod,
-      clientNit: clientNit || undefined,
-      sellerName: currentUser?.name || "Vendedor Gratamira"
+      paymentMethod: validPaymentMethod,
+      clientNit: validClientNit
     };
 
     if (isOffline) {
@@ -1047,9 +1083,9 @@ export default function App() {
       setProducts(prev => prev.map(p => {
         const inCart = posCart.find(c => c.product.id === p.id);
         if (inCart) {
-          const factor = p.conversionFactor || 1;
-          const currentTotalUnits = (p.quantityOnSkins * factor) + p.quantityUnits;
-          const soldUnits = (inCart.qtySkins * factor) + inCart.qtyUnits;
+          const factor = Number(p.conversionFactor) || 1;
+          const currentTotalUnits = (Number(p.quantityOnSkins) * factor) + Number(p.quantityUnits);
+          const soldUnits = (Number(inCart.qtySkins) * factor) + Number(inCart.qtyUnits);
           const remainingUnits = Math.max(0, currentTotalUnits - soldUnits);
           
           return {
@@ -1080,6 +1116,16 @@ export default function App() {
         if (response.ok) {
           setSyncLogs(prev => [`[Servidor] Venta sincronizada exitosa ${invoiceNum}`, ...prev]);
           fetchInitialData();
+        } else {
+          // Fallback to local queue on non-200
+          setSales(prev => [salePayload, ...prev]);
+          setOfflineQueue(prev => [...prev, {
+            id: "action-sale-" + Date.now(),
+            type: "CREATE",
+            entity: "sale",
+            data: salePayload,
+            timestamp: new Date().toISOString()
+          }]);
         }
       } catch (err) {
         alert("Fallo de conexión. La venta se registrará de forma local.");
@@ -1098,9 +1144,6 @@ export default function App() {
     setPosCart([]);
     setInvoiceClientNit("");
     setShowInvoicePreview(false);
-    setTimeout(() => {
-      window.print();
-    }, 400);
   };
 
   // Add Expense
@@ -1219,20 +1262,40 @@ export default function App() {
   };
 
   // Excel / CSV Export
-  const handleDownloadXLS = () => {
-    let csvContent = "data:text/csv;charset=utf-8,ID,Nombre,Categoria,Laboratorio,Sobres/Cajas,Unidades Sueltas,Costo,Precio,Vencimiento,Codigo de Barras\n";
-    products.forEach(p => {
-      const bCodes = (p.barcodes && p.barcodes.length > 0) ? p.barcodes.join(" / ") : (p.barcode || "");
-      csvContent += `"${p.id}","${p.name}","${p.category}","${p.laboratory}",${p.quantityOnSkins},${p.quantityUnits},${p.cost},${p.price},"${p.expirationDate}","${bCodes}"\n`;
-    });
+  const handleDownloadXLS = (type: "inventario" | "closures" | "sales" = "inventario") => {
+    let csvContent = "";
+    let filename = "";
+
+    if (type === "closures") {
+      csvContent = "data:text/csv;charset=utf-8,Fecha,Ventas Registradas,Gastos Deducidos,Fondo Inicial,Arqueo Neto,Estado\n";
+      closures.forEach(cl => {
+        csvContent += `"${cl.date}",${cl.totalSalesRevenue || 0},${cl.totalExpenses || 0},${cl.initialCash || 0},${cl.finalCash || 0},"${cl.isClosed ? 'Consolidado' : 'Abierto'}"\n`;
+      });
+      filename = `cierres_vexapos_${new Date().toISOString().slice(0, 10)}.csv`;
+    } else if (type === "sales") {
+      csvContent = "data:text/csv;charset=utf-8,Factura,Fecha/Hora,Vendedor,Cliente NIT,Total,Metodo Pago\n";
+      sales.forEach(s => {
+        const dt = s.dateTime || s.timestamp || "";
+        const tot = s.total ?? s.totalAmount ?? 0;
+        csvContent += `"${s.invoiceNumber || ''}","${dt}","${s.sellerName || ''}","${s.clientNit || ''}",${tot},"${s.paymentMethod || 'Efectivo'}"\n`;
+      });
+      filename = `ventas_facturacion_vexapos_${new Date().toISOString().slice(0, 10)}.csv`;
+    } else {
+      csvContent = "data:text/csv;charset=utf-8,ID,Nombre,Categoria,Laboratorio,Sobres/Cajas,Unidades Sueltas,Costo,Precio,Vencimiento,Codigo de Barras\n";
+      products.forEach(p => {
+        const bCodes = (p.barcodes && p.barcodes.length > 0) ? p.barcodes.join(" / ") : (p.barcode || "");
+        csvContent += `"${p.id}","${p.name}","${p.category}","${p.laboratory}",${p.quantityOnSkins},${p.quantityUnits},${p.cost},${p.price},"${p.expirationDate}","${bCodes}"\n`;
+      });
+      filename = `inventario_vexapos_${new Date().toISOString().slice(0, 10)}.csv`;
+    }
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `inventario_vexapos_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(encodedUri);
   };
 
   // Computes stock warnings and statistics
@@ -1418,7 +1481,7 @@ export default function App() {
           
           <div className="ticket-info">
             <p><strong>FACTURA:</strong> {activePrintInvoice.invoiceNumber}</p>
-            <p><strong>FECHA:</strong> {new Date().toLocaleString('es-CO')}</p>
+            <p><strong>FECHA:</strong> {new Date(activePrintInvoice.dateTime || activePrintInvoice.timestamp || Date.now()).toLocaleString('es-CO')}</p>
             <p><strong>VENDEDOR:</strong> {activePrintInvoice.sellerName}</p>
             {activePrintInvoice.clientNit && (
               <p><strong>CLIENTE NIT/CC:</strong> {activePrintInvoice.clientNit}</p>
@@ -1435,17 +1498,19 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {activePrintInvoice.items.map((item: any, idx: number) => {
-                const cantDesc = item.quantitySkins > 0 && item.quantityUnits > 0
-                  ? `${item.quantitySkins}c + ${item.quantityUnits}u`
-                  : item.quantitySkins > 0
-                    ? `${item.quantitySkins}c`
-                    : `${item.quantityUnits}u`;
+              {activePrintInvoice.items && activePrintInvoice.items.map((item: any, idx: number) => {
+                const skins = item.quantitySkins ?? item.qtySkins ?? 0;
+                const units = item.quantityUnits ?? item.qtyUnits ?? 0;
+                const cantDesc = skins > 0 && units > 0
+                  ? `${skins}c + ${units}u`
+                  : skins > 0
+                    ? `${skins}c`
+                    : `${units}u`;
                 return (
                   <tr key={idx}>
                     <td>{item.productName}</td>
                     <td className="text-right">{cantDesc}</td>
-                    <td className="text-right">${item.subtotal.toLocaleString('es-CO')}</td>
+                    <td className="text-right">${(item.subtotal || 0).toLocaleString('es-CO')}</td>
                   </tr>
                 );
               })}
@@ -1457,7 +1522,7 @@ export default function App() {
           <div className="ticket-totals">
             <div className="ticket-total-row">
               <span><strong>TOTAL:</strong></span>
-              <span><strong>${activePrintInvoice.total.toLocaleString('es-CO')} COP</strong></span>
+              <span><strong>${(activePrintInvoice.total ?? activePrintInvoice.totalAmount ?? 0).toLocaleString('es-CO')} COP</strong></span>
             </div>
           </div>
           

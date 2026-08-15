@@ -32,8 +32,10 @@ export default function ReportesTab() {
     return bogotaDate.toISOString().split("T")[0];
   };
 
-  const getSaleBogotaDate = (dateTimeStr: string) => {
+  const getSaleBogotaDate = (dateTimeStr?: string) => {
+    if (!dateTimeStr) return "";
     const d = new Date(dateTimeStr);
+    if (isNaN(d.getTime())) return "";
     const bogotaTime = new Date(d.getTime() - 5 * 60 * 60 * 1000);
     return bogotaTime.toISOString().split("T")[0];
   };
@@ -45,10 +47,10 @@ export default function ReportesTab() {
       sale.items.forEach((item: any) => {
         const p = products.find((prod: any) => prod.id === item.productId);
         if (p) {
-          const factor = p.conversionFactor || 1;
-          const skinsQty = Number(item.quantitySkins) || 0;
-          const unitsQty = Number(item.quantityUnits) || 0;
-          const unitCost = p.cost;
+          const factor = Number(p.conversionFactor) || 1;
+          const skinsQty = Number(item.quantitySkins ?? item.qtySkins) || 0;
+          const unitsQty = Number(item.quantityUnits ?? item.qtyUnits) || 0;
+          const unitCost = Number(p.cost) || 0;
           saleCost += unitCost * (skinsQty + (factor > 1 ? (unitsQty / factor) : 0));
         }
       });
@@ -68,12 +70,12 @@ export default function ReportesTab() {
 
   // 1. REPORTE DEL DÍA (TODAY)
   const todayStr = getTodayBogotaStr();
-  const todaySales = sales.filter(s => getSaleBogotaDate(s.dateTime) === todayStr);
-  const todaySalesRevenue = todaySales.reduce((acc, s) => acc + s.total, 0);
+  const todaySales = sales.filter(s => getSaleBogotaDate(s.dateTime || s.timestamp) === todayStr);
+  const todaySalesRevenue = todaySales.reduce((acc, s) => acc + (Number(s.total ?? s.totalAmount) || 0), 0);
   const todayCOGS = todaySales.reduce((acc, s) => acc + calculateSaleCost(s), 0);
 
   const todayClosure = closures.find(c => c.date === todayStr);
-  const todayExpenses = todayClosure ? todayClosure.totalExpenses : 0;
+  const todayExpenses = todayClosure ? (Number(todayClosure.totalExpenses) || 0) : 0;
   const todayExpensesList = todayClosure ? (todayClosure.expenses || []) : [];
   const todayUtility = todaySalesRevenue - todayCOGS - todayExpenses;
 
@@ -82,10 +84,10 @@ export default function ReportesTab() {
   const monthDaysMap: { [date: string]: { sales: number; cogs: number; boxExpenses: number; supplierInvoices: number } } = {};
 
   sales.forEach(s => {
-    const date = getSaleBogotaDate(s.dateTime);
+    const date = getSaleBogotaDate(s.dateTime || s.timestamp);
     if (date.startsWith(currentMonthStr)) {
       if (!monthDaysMap[date]) monthDaysMap[date] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
-      monthDaysMap[date].sales += s.total;
+      monthDaysMap[date].sales += (Number(s.total ?? s.totalAmount) || 0);
       monthDaysMap[date].cogs += calculateSaleCost(s);
     }
   });
@@ -93,14 +95,14 @@ export default function ReportesTab() {
   closures.forEach(c => {
     if (c.date && c.date.startsWith(currentMonthStr)) {
       if (!monthDaysMap[c.date]) monthDaysMap[c.date] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
-      monthDaysMap[c.date].boxExpenses += c.totalExpenses || 0;
+      monthDaysMap[c.date].boxExpenses += Number(c.totalExpenses) || 0;
     }
   });
 
   supplierInvoices.forEach(inv => {
     if (inv.date && inv.date.startsWith(currentMonthStr)) {
       if (!monthDaysMap[inv.date]) monthDaysMap[inv.date] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
-      monthDaysMap[inv.date].supplierInvoices += inv.totalCost || 0;
+      monthDaysMap[inv.date].supplierInvoices += Number(inv.totalCost) || 0;
     }
   });
 
@@ -121,11 +123,11 @@ export default function ReportesTab() {
   const yearMonthsMap: { [month: string]: { sales: number; cogs: number; boxExpenses: number; supplierInvoices: number } } = {};
 
   sales.forEach(s => {
-    const date = getSaleBogotaDate(s.dateTime);
+    const date = getSaleBogotaDate(s.dateTime || s.timestamp);
     if (date.startsWith(currentYearStr)) {
       const month = date.substring(0, 7);
       if (!yearMonthsMap[month]) yearMonthsMap[month] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
-      yearMonthsMap[month].sales += s.total;
+      yearMonthsMap[month].sales += (Number(s.total ?? s.totalAmount) || 0);
       yearMonthsMap[month].cogs += calculateSaleCost(s);
     }
   });
@@ -134,7 +136,7 @@ export default function ReportesTab() {
     if (c.date && c.date.startsWith(currentYearStr)) {
       const month = c.date.substring(0, 7);
       if (!yearMonthsMap[month]) yearMonthsMap[month] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
-      yearMonthsMap[month].boxExpenses += c.totalExpenses || 0;
+      yearMonthsMap[month].boxExpenses += Number(c.totalExpenses) || 0;
     }
   });
 
@@ -142,7 +144,7 @@ export default function ReportesTab() {
     if (inv.date && inv.date.startsWith(currentYearStr)) {
       const month = inv.date.substring(0, 7);
       if (!yearMonthsMap[month]) yearMonthsMap[month] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
-      yearMonthsMap[month].supplierInvoices += inv.totalCost || 0;
+      yearMonthsMap[month].supplierInvoices += Number(inv.totalCost) || 0;
     }
   });
 
@@ -279,14 +281,20 @@ export default function ReportesTab() {
                         ) : (
                           todaySales.map(s => {
                             const cogs = calculateSaleCost(s);
-                            const profit = s.total - cogs;
+                            const saleTotal = Number(s.total ?? s.totalAmount) || 0;
+                            const profit = saleTotal - cogs;
+                            const saleDate = new Date(s.dateTime || s.timestamp || Date.now());
+                            const timeStr = isNaN(saleDate.getTime()) 
+                              ? "--:--" 
+                              : saleDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+
                             return (
                               <tr key={s.id} className="hover:bg-slate-50">
                                 <td className="p-2.5 text-slate-500">
-                                  {new Date(s.dateTime).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                  {timeStr}
                                 </td>
                                 <td className="p-2.5 font-bold text-slate-900">{s.invoiceNumber}</td>
-                                <td className="p-2.5 text-right font-bold text-emerald-800">${s.total.toLocaleString()}</td>
+                                <td className="p-2.5 text-right font-bold text-emerald-800">${saleTotal.toLocaleString()}</td>
                                 <td className="p-2.5 text-right text-slate-500">${cogs.toLocaleString()}</td>
                                 <td className={`p-2.5 text-right font-bold ${profit >= 0 ? 'text-teal-700' : 'text-rose-700'}`}>
                                   ${profit.toLocaleString()}
