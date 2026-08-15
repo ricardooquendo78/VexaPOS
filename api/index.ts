@@ -537,10 +537,10 @@ async function addSale(sale: any) {
 
 function computeFinalCash(closure: any) {
   if (!closure) return closure;
-  const initialCash = closure.initialCash !== undefined ? closure.initialCash : 0;
+  closure.initialCash = 0;
   const totalSalesRevenue = closure.totalSalesRevenue || 0;
   const totalExpenses = closure.totalExpenses || 0;
-  closure.finalCash = initialCash + totalSalesRevenue - totalExpenses;
+  closure.finalCash = totalSalesRevenue - totalExpenses;
   return closure;
 }
 

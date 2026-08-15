@@ -6,6 +6,13 @@ import BarcodeScannerModal from './BarcodeScannerModal';
 
 export default function FacturacionTab() {
   const { isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor } = useAppContext();
+  
+  const cartTotals = calculateCartTotals();
+  const cartSubtotalNum = typeof cartTotals === 'object' && cartTotals !== null ? Number(cartTotals.subtotal ?? cartTotals.total ?? 0) : Number(cartTotals || 0);
+  const cartTotalNum = typeof cartTotals === 'object' && cartTotals !== null ? Number(cartTotals.total ?? cartTotals.subtotal ?? 0) : Number(cartTotals || 0);
+  const cartSubtotalFormatted = (isNaN(cartSubtotalNum) ? 0 : cartSubtotalNum).toLocaleString("es-CO");
+  const cartTotalFormatted = (isNaN(cartTotalNum) ? 0 : cartTotalNum).toLocaleString("es-CO");
+
   const [unifiedQuery, setUnifiedQuery] = React.useState('');
   const [showCameraScanner, setShowCameraScanner] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -467,7 +474,7 @@ export default function FacturacionTab() {
                   <div className="w-full md:max-w-xs bg-slate-50 p-4 rounded-xl border border-slate-150 space-y-2">
                     <div className="flex justify-between text-xs text-slate-500">
                       <span>Subtotal Neto</span>
-                      <span>${calculateCartTotals().subtotal.toLocaleString("es-CO")} COP</span>
+                      <span>${cartSubtotalFormatted} COP</span>
                     </div>
                     <div className="flex justify-between text-xs text-slate-500 font-sans">
                       <span>IVA Incluido (Medicamentos)</span>
@@ -475,7 +482,7 @@ export default function FacturacionTab() {
                     </div>
                     <div className="flex justify-between items-center text-sm font-black border-t pt-2.5 border-slate-200">
                       <span className="text-slate-900 text-[11px] uppercase tracking-wider font-bold">TOTAL VENTA</span>
-                      <span className="text-teal-700 text-lg font-bold">${calculateCartTotals().total.toLocaleString("es-CO")} COP</span>
+                      <span className="text-teal-700 text-lg font-bold">${cartTotalFormatted} COP</span>
                     </div>
                   </div>
 
@@ -571,7 +578,7 @@ export default function FacturacionTab() {
                   <div className="border-t border-dashed pt-2 space-y-1">
                     <div className="flex justify-between font-black text-[13px] text-slate-900">
                       <span>TOTAL NETO COP</span>
-                      <span>${calculateCartTotals().total.toLocaleString("es-CO")} COP</span>
+                      <span>${cartTotalFormatted} COP</span>
                     </div>
                   </div>
 

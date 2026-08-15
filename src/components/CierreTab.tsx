@@ -53,31 +53,31 @@ export default function CierreTab() {
                   <div className="bg-white rounded-xl border p-5 shadow-xs">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-slate-450 block">Monto Total de Ventas</span>
                     <strong className="text-2xl font-black text-slate-900 block mt-1">
-                      ${activeClosure.totalSalesRevenue.toLocaleString("es-CO")} COP
+                      ${(activeClosure.totalSalesRevenue || 0).toLocaleString("es-CO")} COP
                     </strong>
-                    <span className="text-[10.5px] text-slate-500 block mt-1.5">{activeClosure.totalSalesCount} transacciones en mostrador</span>
+                    <span className="text-[10.5px] text-slate-500 block mt-1.5">{activeClosure.totalSalesCount || 0} transacciones en mostrador</span>
                   </div>
 
                   <div className="bg-white rounded-xl border p-5 shadow-xs">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-slate-450 block">Gastos Registrados (Deducción)</span>
                     <strong className="text-2xl font-black text-rose-700 block mt-1">
-                      -${activeClosure.totalExpenses.toLocaleString("es-CO")} COP
+                      -${(activeClosure.totalExpenses || 0).toLocaleString("es-CO")} COP
                     </strong>
-                    <span className="text-[10.5px] text-slate-500 block mt-1.5">{activeClosure.expenses.length} ítems de egresos</span>
+                    <span className="text-[10.5px] text-slate-500 block mt-1.5">{activeClosure.expenses?.length || 0} ítems de egresos</span>
                   </div>
 
                   <div className="bg-white rounded-xl border p-5 shadow-xs">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-slate-450 block">Base Operativa (Fondo de caja)</span>
                     <strong className="text-2xl font-black text-slate-900 block mt-1">
-                      ${activeClosure.initialCash.toLocaleString("es-CO")} COP
+                      $0 COP
                     </strong>
-                    <span className="text-[10.5px] text-slate-500 block mt-1.5">Efectivo inicial estandarizado</span>
+                    <span className="text-[10.5px] text-slate-500 block mt-1.5">Sin base inicial</span>
                   </div>
 
                   <div className="bg-teal-900 rounded-xl p-5 shadow-xs text-white">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-teal-300 block">Flujo de Caja Real Neto</span>
                     <strong className="text-2xl font-black block mt-1">
-                      ${activeClosure.finalCash.toLocaleString("es-CO")} COP
+                      ${((activeClosure.totalSalesRevenue || 0) - (activeClosure.totalExpenses || 0)).toLocaleString("es-CO")} COP
                     </strong>
                     <span className="text-[10.5px] text-teal-100/70 block mt-1.5">Balance de arqueo de caja</span>
                   </div>
@@ -89,48 +89,58 @@ export default function CierreTab() {
                   {/* Expense formulation registered */}
                   <div className="bg-white rounded-xl border border-slate-200 p-5 md:p-6 shadow-sm flex flex-col justify-between">
                     <div>
-                      <h3 className="font-bold text-slate-950 text-base leading-none">Registrar Gasto de Caja Diaria</h3>
-                      <p className="text-[11px] text-slate-550 mt-1 mb-4">Adicione egresos debidamente justificados (bolsas plásticas, tinto, servicios básicos, papelería) para el balance de arqueo.</p>
+                      <div className="border-b pb-3 mb-4">
+                        <h3 className="font-bold text-slate-900 text-sm">Registrar Gasto de Caja Diaria</h3>
+                        <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                          Adicione egresos debidamente justificados (bolsas plásticas, tinto, servicios básicos, papelería) para el balance de arqueo.
+                        </p>
+                      </div>
                       
-                      <form onSubmit={handleAddExpense} className="space-y-3.5">
+                      <form onSubmit={handleAddExpense} className="space-y-4">
                         <div>
-                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Descripción de Gasto *</label>
+                          <label className="block text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">
+                            Descripción de Gasto *
+                          </label>
                           <input
                             type="text"
                             required
                             placeholder="Ej: Compra de bolsas biodegradables"
                             value={expenseDesc}
                             onChange={(e) => setExpenseDesc(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg bg-white text-xs"
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-600 transition"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Monto en Pesos ($ COP) *</label>
+                          <label className="block text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">
+                            Monto en Pesos ($ COP) *
+                          </label>
                           <input
                             type="number"
                             required
                             min="1"
-                            placeholder="Monto gastado"
-                            value={expenseAmount}
+                            placeholder="0"
+                            value={expenseAmount || ""}
                             onChange={(e) => setExpenseAmount(Number(e.target.value))}
-                            className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold"
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-600 transition font-mono font-bold"
                           />
                         </div>
 
                         <button
                           type="submit"
-                          className="w-full bg-slate-900 border border-slate-850 text-white font-semibold py-2 rounded-lg text-xs"
+                          className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                         >
-                          Adicionar Gasto y Restar de Flujo
+                          <PlusCircle className="w-4 h-4 text-rose-400" />
+                          <span>Adicionar Gasto y Restar de Flujo</span>
                         </button>
                       </form>
                     </div>
 
-                    <div className="border-t pt-4 mt-6">
+                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
                       <button
+                        type="button"
                         onClick={() => setShowHistoryModal(true)}
-                        className="w-full px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                        className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 transition"
                       >
                         Ver Historial de Cierres Consolidados
                       </button>
@@ -146,7 +156,7 @@ export default function CierreTab() {
                       </div>
 
                       <div className="space-y-2 max-h-56 overflow-y-auto">
-                        {activeClosure.expenses.length === 0 ? (
+                        {(activeClosure.expenses || []).length === 0 ? (
                           <div className="text-center py-10 text-slate-400 text-xs italic">
                             No se han registrado gastos en el turno actual.
                           </div>
@@ -157,7 +167,7 @@ export default function CierreTab() {
                                 <strong className="text-slate-900">{exp.description}</strong>
                                 <span className="block text-[10px] text-slate-400">{new Date(exp.timestamp).toLocaleTimeString()}</span>
                               </div>
-                              <span className="text-rose-700 font-bold">-${exp.amount.toLocaleString()} COP</span>
+                              <span className="text-rose-700 font-bold">-${Number(exp.amount || 0).toLocaleString()} COP</span>
                             </div>
                           ))
                         )}
@@ -166,7 +176,7 @@ export default function CierreTab() {
 
                     <div className="border-t pt-4 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
                       <span className="block text-[11px] text-teal-850 font-medium text-center">
-                        ℹ️ El cierre de caja se realiza automáticamente a la medianoche (12:00 PM, hora de Bogotá). El balance diurno se reinicia al iniciar el nuevo día con la base autorizada de $100.000 COP.
+                        ℹ️ El cierre de caja se realiza automáticamente al finalizar la jornada. El balance diurno registra el flujo neto de ventas menos egresos.
                       </span>
                     </div>
 
@@ -238,10 +248,10 @@ export default function CierreTab() {
                                   closures.map((cl) => (
                                     <tr key={cl.id} className="hover:bg-slate-50 font-medium">
                                       <td className="p-2.5 font-bold text-slate-900">{cl.date}</td>
-                                      <td className="p-2.5 text-emerald-700">+${cl.totalSalesRevenue.toLocaleString()}</td>
-                                      <td className="p-2.5 text-rose-700">-${cl.totalExpenses.toLocaleString()}</td>
-                                      <td className="p-2.5 text-slate-500">${cl.initialCash.toLocaleString()}</td>
-                                      <td className="p-2.5 text-slate-900 font-bold">${cl.finalCash.toLocaleString()}</td>
+                                      <td className="p-2.5 text-emerald-700">+${(cl.totalSalesRevenue || 0).toLocaleString()}</td>
+                                      <td className="p-2.5 text-rose-700">-${(cl.totalExpenses || 0).toLocaleString()}</td>
+                                      <td className="p-2.5 text-slate-500">$0</td>
+                                      <td className="p-2.5 text-slate-900 font-bold">${((cl.totalSalesRevenue || 0) - (cl.totalExpenses || 0)).toLocaleString()}</td>
                                       <td className="p-2.5">
                                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
                                           cl.isClosed ? 'bg-slate-100 text-slate-700 border' : 'bg-amber-50 text-amber-800 border'
