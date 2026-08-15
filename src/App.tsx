@@ -1236,31 +1236,46 @@ export default function App() {
   };
 
   // Computes stock warnings and statistics
-  const filteredProducts = products
+  const filteredProducts = (products || [])
     .filter(p => {
-      const q = prodSearchQuery.toLowerCase().trim();
+      if (!p) return false;
+      const q = (prodSearchQuery || "").toLowerCase().trim();
+      const name = (p.name || "").toLowerCase();
+      const lab = (p.laboratory || "").toLowerCase();
+      const cat = (p.category || "").toLowerCase();
+      const barcode = (p.barcode || "").toLowerCase();
+      const barcodes = Array.isArray(p.barcodes) ? p.barcodes : [];
       const matchesSearch = !q ||
-        p.name.toLowerCase().includes(q) ||
-        (p.laboratory && p.laboratory.toLowerCase().includes(q)) ||
-        (p.category && p.category.toLowerCase().includes(q)) ||
-        (p.barcode && p.barcode.toLowerCase().includes(q)) ||
-        (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.some(b => b && b.toLowerCase().includes(q)));
+        name.includes(q) ||
+        lab.includes(q) ||
+        cat.includes(q) ||
+        barcode.includes(q) ||
+        barcodes.some(b => b && typeof b === "string" && b.toLowerCase().includes(q));
       const matchesCategory = prodCategoryFilter ? p.category === prodCategoryFilter : true;
       return matchesSearch && matchesCategory;
     })
-    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es", { sensitivity: "base" }));
+    .sort((a, b) => (a?.name || "").localeCompare(b?.name || "", "es", { sensitivity: "base" }));
 
-  const totalInventoryCost = products.reduce((acc, p) => {
-    // cost is per envelope / box. We estimate loose unit cost relative to conversion factor
-    const skinValue = p.quantityOnSkins * p.cost;
-    const unitValue = p.conversionFactor > 1 ? p.quantityUnits * (p.cost / p.conversionFactor) : 0;
+  const totalInventoryCost = (products || []).reduce((acc, p) => {
+    if (!p) return acc;
+    const skins = Number(p.quantityOnSkins) || 0;
+    const cost = Number(p.cost) || 0;
+    const factor = Number(p.conversionFactor) || 1;
+    const units = Number(p.quantityUnits) || 0;
+    const skinValue = skins * cost;
+    const unitValue = factor > 1 ? units * (cost / factor) : 0;
     return acc + skinValue + unitValue;
   }, 0);
 
-  const totalInventoryPriceValue = products.reduce((acc, p) => {
-    const skinValue = p.quantityOnSkins * p.price;
-    const unitValue = p.conversionFactor > 1 
-      ? p.quantityUnits * (p.priceUnits && p.priceUnits > 0 ? p.priceUnits : (p.price / p.conversionFactor)) 
+  const totalInventoryPriceValue = (products || []).reduce((acc, p) => {
+    if (!p) return acc;
+    const skins = Number(p.quantityOnSkins) || 0;
+    const price = Number(p.price) || 0;
+    const factor = Number(p.conversionFactor) || 1;
+    const units = Number(p.quantityUnits) || 0;
+    const skinValue = skins * price;
+    const unitValue = factor > 1 
+      ? units * (p.priceUnits && Number(p.priceUnits) > 0 ? Number(p.priceUnits) : (price / factor)) 
       : 0;
     return acc + skinValue + unitValue;
   }, 0);

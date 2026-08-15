@@ -514,10 +514,9 @@ export default function InventarioTab() {
   return (
     <>
       {/* TAB CONTENT: INVENTARIO */}
-      {activeTab === "inventario" && (
-              <div className="w-full">
-                
-                <aside className="fixed left-0 top-[180px] z-30 w-12 bg-white border border-l-0 border-slate-200 shadow-md rounded-r-xl py-3 hidden md:flex flex-col gap-2.5 items-center">
+      <div className="w-full">
+        
+        <aside className="fixed left-0 top-[180px] z-30 w-12 bg-white border border-l-0 border-slate-200 shadow-md rounded-r-xl py-3 hidden md:flex flex-col gap-2.5 items-center">
                   
                   {/* Botón: Lista de Productos */}
                   <div className="relative group">
@@ -1507,18 +1506,18 @@ export default function InventarioTab() {
                                       )}
                                     </td>
                                     <td className="p-3 text-right font-bold text-slate-900">
-                                      ${item.cost.toLocaleString("es-CO")}
-                                      {prodOriginal && prodOriginal.cost !== item.cost && (
-                                        <div className="text-[9px] text-amber-600 font-medium">Original: ${prodOriginal.cost.toLocaleString("es-CO")}</div>
+                                      ${(Number(item.cost) || 0).toLocaleString("es-CO")}
+                                      {prodOriginal && prodOriginal.cost !== undefined && prodOriginal.cost !== item.cost && (
+                                        <div className="text-[9px] text-amber-600 font-medium">Original: ${(Number(prodOriginal.cost) || 0).toLocaleString("es-CO")}</div>
                                       )}
                                     </td>
                                     <td className="p-3 text-right font-extrabold text-teal-800">
-                                      <div>${item.price.toLocaleString("es-CO")} sob.</div>
-                                      {item.conversionFactor > 1 && item.priceUnits && (
-                                        <div className="text-[10px] text-emerald-700 font-bold mt-0.5">${item.priceUnits.toLocaleString("es-CO")} u. suelta</div>
+                                      <div>${(Number(item.price) || 0).toLocaleString("es-CO")} sob.</div>
+                                      {item.conversionFactor > 1 && item.priceUnits !== undefined && Number(item.priceUnits) > 0 && (
+                                        <div className="text-[10px] text-emerald-700 font-bold mt-0.5">${(Number(item.priceUnits) || 0).toLocaleString("es-CO")} u. suelta</div>
                                       )}
-                                      {prodOriginal && prodOriginal.price !== item.price && (
-                                        <div className="text-[9px] text-amber-600 font-medium">Original: ${prodOriginal.price.toLocaleString("es-CO")}</div>
+                                      {prodOriginal && prodOriginal.price !== undefined && prodOriginal.price !== item.price && (
+                                        <div className="text-[9px] text-amber-600 font-medium">Original: ${(Number(prodOriginal.price) || 0).toLocaleString("es-CO")}</div>
                                       )}
                                     </td>
                                     <td className="p-3 text-center font-bold text-slate-700">
@@ -1833,8 +1832,15 @@ export default function InventarioTab() {
                           </tr>
                         ) : (
                           filteredProducts.map(p => {
-                            const minAlertVal = p.minStockAlert !== undefined && p.minStockAlert !== null ? p.minStockAlert : 0;
-                            const totalUnits = (p.quantityOnSkins * p.conversionFactor) + p.quantityUnits;
+                            if (!p) return null;
+                            const minAlertVal = p.minStockAlert !== undefined && p.minStockAlert !== null ? Number(p.minStockAlert) : 0;
+                            const factor = Number(p.conversionFactor) || 1;
+                            const skins = Number(p.quantityOnSkins) || 0;
+                            const units = Number(p.quantityUnits) || 0;
+                            const price = Number(p.price) || 0;
+                            const cost = Number(p.cost) || 0;
+                            const priceUnits = p.priceUnits !== undefined ? Number(p.priceUnits) : 0;
+                            const totalUnits = (skins * factor) + units;
                             const isLowStock = totalUnits <= minAlertVal;
                             const dateExpiry = p.expirationDate ? new Date(p.expirationDate) : null;
                             const monthsToExpiry = dateExpiry && !isNaN(dateExpiry.getTime())
@@ -1855,17 +1861,17 @@ export default function InventarioTab() {
                                 <td className="p-3 font-semibold text-slate-900">
                                   <div className="flex items-center gap-2.5">
                                     {p.fotoUrl ? (
-                                      <img src={p.fotoUrl} alt={p.name} className="w-8 h-8 rounded-md object-cover border border-slate-200" />
+                                      <img src={p.fotoUrl} alt={p.name || ""} className="w-8 h-8 rounded-md object-cover border border-slate-200" />
                                     ) : (
                                       <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center text-slate-400">
                                         <Package className="w-4 h-4" />
                                       </div>
                                     )}
                                     <div>
-                                      <span>{p.name}</span>
+                                      <span>{p.name || "Sin nombre"}</span>
                                       {((p.barcodes && p.barcodes.length > 0) || p.barcode) && (
                                         <div className="flex flex-wrap gap-1 mt-0.5">
-                                          {((p.barcodes && p.barcodes.length > 0) ? p.barcodes : [p.barcode]).map((b: string, idx: number) => (
+                                          {((p.barcodes && p.barcodes.length > 0) ? p.barcodes : [p.barcode]).filter(Boolean).map((b: string, idx: number) => (
                                             <span key={idx} className="inline-block font-mono text-[9px] text-slate-500 bg-slate-100 px-1 py-0.5 rounded border border-slate-200">
                                               {b}
                                             </span>
@@ -1875,21 +1881,21 @@ export default function InventarioTab() {
                                     </div>
                                   </div>
                                 </td>
-                                <td className="p-3 text-slate-600 font-medium">{p.laboratory}</td>
+                                <td className="p-3 text-slate-600 font-medium">{p.laboratory || "-"}</td>
                                 <td className="p-3">
                                   <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border text-[9px]">
-                                    {p.category}
+                                    {p.category || "General"}
                                   </span>
                                 </td>
                                 <td className="p-3 font-bold text-teal-800 text-xs">
-                                  <div>${p.price.toLocaleString("es-CO")} COP</div>
-                                  {p.conversionFactor > 1 && p.priceUnits !== undefined && p.priceUnits > 0 && (
-                                    <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">${p.priceUnits.toLocaleString("es-CO")} u. suelta</div>
+                                  <div>${price.toLocaleString("es-CO")} COP</div>
+                                  {factor > 1 && priceUnits > 0 && (
+                                    <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">${priceUnits.toLocaleString("es-CO")} u. suelta</div>
                                   )}
                                 </td>
-                                <td className="p-3 text-slate-500">${p.cost.toLocaleString("es-CO")}</td>
-                                <td className="p-3 text-center font-bold text-slate-900 bg-slate-50/50">{p.quantityOnSkins}</td>
-                                <td className="p-3 text-center font-mono text-slate-600">{p.quantityUnits} u <span className="text-[10px] text-slate-400">({p.conversionFactor > 1 ? `de ${p.conversionFactor}` : 'frac regular'})</span></td>
+                                <td className="p-3 text-slate-500">${cost.toLocaleString("es-CO")}</td>
+                                <td className="p-3 text-center font-bold text-slate-900 bg-slate-50/50">{skins}</td>
+                                <td className="p-3 text-center font-mono text-slate-600">{units} u <span className="text-[10px] text-slate-400">({factor > 1 ? `de ${factor}` : 'frac regular'})</span></td>
                                 <td className="p-3">
                                   {isLowStock ? (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
@@ -1947,7 +1953,6 @@ export default function InventarioTab() {
 
             </div>
           </div>
-        )}
       {showBarcodeScannerModal && (
         <BarcodeScannerModal
           onScan={(code) => {
