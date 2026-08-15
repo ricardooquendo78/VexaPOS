@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import dotenv from "dotenv";
 import { MongoClient, Db } from "mongodb";
 import dns from "dns";
@@ -14,6 +15,31 @@ try {
 dotenv.config();
 
 const DB_FILE = path.join(process.cwd(), "db-store.json");
+
+// Password hashing & verification utilities using Node crypto (scrypt)
+export function hashPassword(password: string): string {
+  if (!password) return "";
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `s2:${salt}:${hash}`;
+}
+
+export function verifyPassword(password: string, storedHash: string): boolean {
+  if (!password || !storedHash) return false;
+  // Legacy plain-text password compatibility
+  if (!storedHash.startsWith("s2:")) {
+    return password === storedHash;
+  }
+  const parts = storedHash.split(":");
+  if (parts.length !== 3) return false;
+  const [, salt, originalHash] = parts;
+  try {
+    const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+    return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(originalHash, "hex"));
+  } catch (err) {
+    return false;
+  }
+}
 
 // Helper interfaces
 interface AppState {
@@ -41,7 +67,7 @@ interface AppState {
 
 const DEFAULT_STATE: AppState = {
   users: [
-    { id: "1", name: "Administrador Vexa POS", email: "drogueriagratamira@gmail.com", password: "43518612", role: "admin", profileImage: "" }
+    { id: "1", name: "Administrador Vexa POS", email: "drogueriagratamira@gmail.com", password: hashPassword("43518612"), role: "admin", profileImage: "" }
   ],
   config: {
     business: {
@@ -76,7 +102,20 @@ function loadDb(): AppState {
   try {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, "utf8");
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      let modified = false;
+      if (parsed.users && Array.isArray(parsed.users)) {
+        for (const u of parsed.users) {
+          if (u.password && !u.password.startsWith("s2:")) {
+            u.password = hashPassword(u.password);
+            modified = true;
+          }
+        }
+      }
+      if (modified) {
+        saveDb(parsed);
+      }
+      return parsed;
     }
   } catch (err) {
     console.error("Error reading database file, using fallback state:", err);
@@ -132,7 +171,11 @@ async function seedMongoDatabase() {
     const localDb = loadDb();
 
     if (localDb.users && localDb.users.length > 0) {
-      await mongoDb.collection("users").insertMany(localDb.users);
+      const usersToInsert = localDb.users.map(u => ({
+        ...u,
+        password: u.password.startsWith("s2:") ? u.password : hashPassword(u.password)
+      }));
+      await mongoDb.collection("users").insertMany(usersToInsert);
     }
 
     if (localDb.config && localDb.config.business) {
@@ -204,6 +247,25 @@ async function connectToMongo(): Promise<Db | null> {
         
         // Seed DB
         await seedMongoDatabase();
+
+        // Auto-migrate legacy plain text passwords in Atlas to secure hash format
+        try {
+          const unhashedUsers = await mongoDb.collection("users").find({
+            password: { $not: /^s2:/ }
+          }).toArray();
+          for (const u of unhashedUsers) {
+            if (u.password && !u.password.startsWith("s2:")) {
+              await mongoDb.collection("users").updateOne(
+                { _id: u._id },
+                { $set: { password: hashPassword(u.password) } }
+              );
+              console.log(`[Droguería Backend] Migrated and hashed password for user: ${u.email}`);
+            }
+          }
+        } catch (e) {
+          console.warn("[Droguería Backend] Password auto-migration notice:", e);
+        }
+
         return mongoDb;
       } catch (err) {
         console.error("[Droguería Backend] MongoDB connection failed. Falling back to local JSON store.", err);
@@ -232,6 +294,22 @@ async function addUser(user: any) {
   const db = loadDb();
   db.users.push(user);
   saveDb(db);
+}
+
+async function updateUserPassword(userId: string, newPasswordHash: string) {
+  if (mongoDb) {
+    await mongoDb.collection("users").updateOne(
+      { id: userId },
+      { $set: { password: newPasswordHash } }
+    );
+    return;
+  }
+  const db = loadDb();
+  const userIdx = db.users.findIndex((u: any) => u.id === userId);
+  if (userIdx !== -1) {
+    db.users[userIdx].password = newPasswordHash;
+    saveDb(db);
+  }
 }
 
 async function updatePersonalProfile(userId: string, name: string, profileImage: string) {
@@ -306,6 +384,16 @@ async function updateProduct(productId: string, updateData: any) {
     db.products[idx] = { ...db.products[idx], ...updateData };
     saveDb(db);
   }
+}
+
+async function deleteProduct(productId: string) {
+  if (mongoDb) {
+    await mongoDb.collection("products").deleteOne({ id: productId });
+    return;
+  }
+  const db = loadDb();
+  db.products = db.products.filter(p => p.id !== productId);
+  saveDb(db);
 }
 
 async function getSuppliers() {
@@ -728,37 +816,40 @@ app.get("/api/health", (req, res) => {
 
 // Authentication endpoints
 app.post("/api/auth/login", async (req, res) => {
-  const { email, password } = req.body;
-  const users = await getUsers();
-  const user = users.find(u => u.email === email && u.password === password);
-  if (user) {
-    const { password, ...userWithoutPassword } = user;
+  try {
+    const { email, password } = req.body;
+    if (!email || !password || typeof email !== "string" || typeof password !== "string") {
+      return res.status(400).json({ success: false, message: "Correo y contraseña requeridos." });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const users = await getUsers();
+    const user = users.find(u => (u.email || "").trim().toLowerCase() === cleanEmail);
+
+    if (!user || !user.password || !verifyPassword(password, user.password)) {
+      return res.status(401).json({ success: false, message: "Correo o contraseña incorrectos." });
+    }
+
+    // Auto-migrate legacy plain text passwords in database to secure hash format
+    if (!user.password.startsWith("s2:")) {
+      const newHashed = hashPassword(password);
+      await updateUserPassword(user.id, newHashed);
+    }
+
+    const { password: _, ...userWithoutPassword } = user;
     res.json({ success: true, user: userWithoutPassword });
-  } else {
-    res.status(401).json({ success: false, message: "Correo o contraseña incorrectos." });
+  } catch (err) {
+    console.error("Login processing error:", err);
+    res.status(500).json({ success: false, message: "Error interno al procesar el inicio de sesión." });
   }
 });
 
+// Registration endpoint disabled for security
 app.post("/api/auth/register", async (req, res) => {
-  const { name, email, password, role } = req.body;
-  const users = await getUsers();
-  const exists = users.some(u => u.email === email);
-  if (exists) {
-    return res.status(400).json({ success: false, message: "El correo ya está registrado." });
-  }
-
-  const newUser = {
-    id: "u-" + Date.now(),
-    name,
-    email,
-    password,
-    role: role || "worker",
-    profileImage: ""
-  };
-  await addUser(newUser);
-
-  const { password: _, ...userWithoutPassword } = newUser;
-  res.status(201).json({ success: true, user: userWithoutPassword });
+  return res.status(403).json({
+    success: false,
+    message: "El registro de nuevos usuarios está deshabilitado por motivos de seguridad. Acceso restringido a cuentas autorizadas existentes."
+  });
 });
 
 // Profile configuration config
@@ -794,42 +885,55 @@ app.post("/api/profile/personal", async (req, res) => {
 // Inventory endpoint: List all products
 app.get("/api/inventory", async (req, res) => {
   const productsList = await getProducts();
-  res.json(productsList);
+  const sorted = [...productsList].sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", "es", { sensitivity: "base" })
+  );
+  res.json(sorted);
 });
 
 // Create initial product
 app.post("/api/inventory/initial", async (req, res) => {
-  const { name, expirationDate, laboratory, cost, price, priceUnits, category, quantityOnSkins, quantityUnits, conversionFactor, minStockAlert, barcode, fotoUrl } = req.body;
+  try {
+    const { name, expirationDate, laboratory, cost, price, priceUnits, category, quantityOnSkins, quantityUnits, conversionFactor, minStockAlert, barcode, barcodes, fotoUrl } = req.body;
 
-  if (!name || !laboratory || !category) {
-    return res.status(400).json({ success: false, message: "Faltan campos obligatorios." });
+    if (!name || !laboratory || !category) {
+      return res.status(400).json({ success: false, message: "Nombre, laboratorio y categoría son obligatorios." });
+    }
+
+    const barcodeList = Array.isArray(barcodes)
+      ? barcodes.filter(b => typeof b === "string" && b.trim()).slice(0, 3)
+      : (barcode ? [barcode] : []);
+
+    const newProduct = {
+      id: "prod-" + Date.now(),
+      name,
+      expirationDate: expirationDate || "2027-12-31",
+      laboratory,
+      cost: Number(cost) || 0,
+      price: Number(price) || 0,
+      priceUnits: priceUnits ? Number(priceUnits) : undefined,
+      category,
+      quantityOnSkins: Number(quantityOnSkins) || 0,
+      quantityUnits: Number(quantityUnits) || 0,
+      conversionFactor: Number(conversionFactor) || 1,
+      minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
+      barcode: barcodeList[0] || barcode || "",
+      barcodes: barcodeList,
+      fotoUrl: fotoUrl || "",
+      isActive: true
+    };
+
+    await addProduct(newProduct);
+    res.status(201).json({ success: true, product: newProduct });
+  } catch (err) {
+    console.error("Error creating initial product:", err);
+    res.status(500).json({ success: false, message: "Error al guardar el producto." });
   }
-
-  const newProduct = {
-    id: "prod-" + Date.now(),
-    name,
-    expirationDate: expirationDate || "2027-12-31",
-    laboratory,
-    cost: Number(cost) || 0,
-    price: Number(price) || 0,
-    priceUnits: priceUnits ? Number(priceUnits) : undefined,
-    category,
-    quantityOnSkins: Number(quantityOnSkins) || 0,
-    quantityUnits: Number(quantityUnits) || 0,
-    conversionFactor: Number(conversionFactor) || 1,
-    minStockAlert: Number(minStockAlert) || 5,
-    barcode: barcode || "",
-    fotoUrl: fotoUrl || "",
-    isActive: true
-  };
-
-  await addProduct(newProduct);
-  res.status(201).json({ success: true, product: newProduct });
 });
 
 // Update existing product
 app.post("/api/inventory/update", async (req, res) => {
-  const { id, name, expirationDate, laboratory, cost, price, priceUnits, category, quantityOnSkins, quantityUnits, conversionFactor, minStockAlert, barcode, fotoUrl } = req.body;
+  const { id, name, expirationDate, laboratory, cost, price, priceUnits, category, quantityOnSkins, quantityUnits, conversionFactor, minStockAlert, barcode, barcodes, fotoUrl } = req.body;
 
   if (!id || !name || !laboratory || !category) {
     return res.status(400).json({ success: false, message: "Faltan campos obligatorios." });
@@ -840,6 +944,10 @@ app.post("/api/inventory/update", async (req, res) => {
   if (!p) {
     return res.status(404).json({ success: false, message: "Producto no encontrado." });
   }
+
+  const barcodeList = Array.isArray(barcodes)
+    ? barcodes.filter(b => typeof b === "string" && b.trim()).slice(0, 3)
+    : (barcode ? [barcode] : (p.barcodes || (p.barcode ? [p.barcode] : [])));
 
   const updatedProduct = {
     ...p,
@@ -853,14 +961,37 @@ app.post("/api/inventory/update", async (req, res) => {
     quantityOnSkins: Number(quantityOnSkins) || 0,
     quantityUnits: Number(quantityUnits) || 0,
     conversionFactor: Number(conversionFactor) || 1,
-    minStockAlert: Number(minStockAlert) || 5,
-    barcode: barcode || "",
+    minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
+    barcode: barcodeList[0] || barcode || "",
+    barcodes: barcodeList,
     fotoUrl: fotoUrl || p.fotoUrl || "",
     isActive: true
   };
 
   await updateProduct(id, updatedProduct);
   res.json({ success: true, product: updatedProduct });
+});
+
+// Delete existing product
+app.post("/api/inventory/delete", async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) {
+      return res.status(400).json({ success: false, message: "ID de producto requerido." });
+    }
+
+    const productsList = await getProducts();
+    const p = productsList.find(prod => prod.id === id);
+    if (!p) {
+      return res.status(404).json({ success: false, message: "Producto no encontrado." });
+    }
+
+    await deleteProduct(id);
+    res.json({ success: true, message: `Producto "${p.name}" eliminado correctamente.` });
+  } catch (err) {
+    console.error("Error deleting product:", err);
+    res.status(500).json({ success: false, message: "Error al eliminar producto." });
+  }
 });
 
 // Inbound supplier invoice (load items)
@@ -906,29 +1037,63 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
   const productsList = await getProducts();
 
   for (const item of items) {
-    const { productId, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate } = item;
+    const { productId, isNewProduct, name, laboratory, category, conversionFactor, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate, minStockAlert, barcode, fotoUrl } = item;
     try {
-      const overrideFields: any = {};
-      if (cost !== undefined && cost !== null && cost > 0) overrideFields.cost = Number(cost);
-      if (price !== undefined && price !== null && price > 0) overrideFields.price = Number(price);
-      if (priceUnits !== undefined && priceUnits !== null && priceUnits > 0) overrideFields.priceUnits = Number(priceUnits);
-      if (expirationDate) overrideFields.expirationDate = expirationDate;
+      const existingProduct = productsList.find(prod => prod.id === productId);
 
-      const success = await adjustProductStock(
-        productId,
-        Number(quantitySkins) || 0,
-        Number(quantityUnits) || 0,
-        overrideFields
-      );
-      
-      if (success) {
+      if (isNewProduct || !existingProduct) {
+        // It's a new product created staged inside this invoice
+        const finalId = (productId && !productId.startsWith("new-prod-"))
+          ? productId
+          : "prod-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4);
+
+        const newProductObj = {
+          id: finalId,
+          name: name || item.productName || "Producto",
+          expirationDate: expirationDate || "2027-12-31",
+          laboratory: laboratory || "General",
+          cost: Number(cost) || 0,
+          price: Number(price) || 0,
+          priceUnits: priceUnits !== undefined && priceUnits !== null ? Number(priceUnits) : undefined,
+          category: category || "General",
+          quantityOnSkins: Number(quantitySkins) || 0,
+          quantityUnits: Number(quantityUnits) || 0,
+          conversionFactor: Number(conversionFactor) || 1,
+          minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
+          barcode: barcode || "",
+          fotoUrl: fotoUrl || "",
+          isActive: true
+        };
+
+        await addProduct(newProductObj);
         updatedCount++;
-        const p = productsList.find(prod => prod.id === productId);
-        if (p) {
-          const factor = p.conversionFactor || 1;
+
+        const factor = newProductObj.conversionFactor || 1;
+        const itemSkins = Number(quantitySkins) || 0;
+        const itemUnits = Number(quantityUnits) || 0;
+        const itemCost = Number(cost) || 0;
+        totalInvoiceCost += itemCost * (itemSkins + (factor > 1 ? (itemUnits / factor) : 0));
+      } else {
+        // Existing product: adjust stock & override price/cost/expiration if provided
+        const overrideFields: any = {};
+        if (cost !== undefined && cost !== null && cost > 0) overrideFields.cost = Number(cost);
+        if (price !== undefined && price !== null && price > 0) overrideFields.price = Number(price);
+        if (priceUnits !== undefined && priceUnits !== null && priceUnits > 0) overrideFields.priceUnits = Number(priceUnits);
+        if (expirationDate) overrideFields.expirationDate = expirationDate;
+
+        const success = await adjustProductStock(
+          productId,
+          Number(quantitySkins) || 0,
+          Number(quantityUnits) || 0,
+          overrideFields
+        );
+
+        if (success) {
+          updatedCount++;
+          const factor = existingProduct.conversionFactor || 1;
           const itemSkins = Number(quantitySkins) || 0;
           const itemUnits = Number(quantityUnits) || 0;
-          const itemCost = Number(cost) || p.cost || 0;
+          const itemCost = Number(cost) || existingProduct.cost || 0;
           totalInvoiceCost += itemCost * (itemSkins + (factor > 1 ? (itemUnits / factor) : 0));
         }
       }
@@ -943,7 +1108,7 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
       const supplier = suppliersList.find(s => s.id === supplierId);
       const supplierName = supplier ? supplier.companyName : "Proveedor";
       const todayStr = getBogotaDateStr();
-      
+
       const supplierInvoiceObj = {
         id: "sup-inv-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
         supplierId: supplierId || "unknown",
@@ -1206,7 +1371,7 @@ app.post("/api/sync", async (req, res) => {
           quantityOnSkins: Number(data.quantityOnSkins) || 0,
           quantityUnits: Number(data.quantityUnits) || 0,
           conversionFactor: Number(data.conversionFactor) || 1,
-          minStockAlert: Number(data.minStockAlert) || 5,
+          minStockAlert: (data.minStockAlert !== undefined && data.minStockAlert !== null && data.minStockAlert !== "" && !isNaN(Number(data.minStockAlert))) ? Math.max(0, Number(data.minStockAlert)) : 0,
           barcode: data.barcode || "",
           fotoUrl: data.fotoUrl || "",
           isActive: true
@@ -1232,13 +1397,17 @@ app.post("/api/sync", async (req, res) => {
           quantityOnSkins: Number(data.quantityOnSkins) || 0,
           quantityUnits: Number(data.quantityUnits) || 0,
           conversionFactor: Number(data.conversionFactor) || 1,
-          minStockAlert: Number(data.minStockAlert) || 5,
+          minStockAlert: (data.minStockAlert !== undefined && data.minStockAlert !== null && data.minStockAlert !== "" && !isNaN(Number(data.minStockAlert))) ? Math.max(0, Number(data.minStockAlert)) : 0,
           barcode: data.barcode || "",
           fotoUrl: data.fotoUrl || p.fotoUrl || ""
         };
         await updateProduct(data.id, updated);
         logs.push(`Edición de producto offline registrada: "${data.name}"`);
       }
+    }
+    else if (entity === "product_delete" || (type === "DELETE" && entity === "product")) {
+      await deleteProduct(data.id);
+      logs.push(`Eliminación de producto offline registrada: ID "${data.id}"`);
     }
     else if (entity === "restock" || entity === "invoice_bulk") {
       const itemsToProcess = Array.isArray(data.items) ? data.items : [data];
@@ -1247,26 +1416,59 @@ app.post("/api/sync", async (req, res) => {
       
       for (const item of itemsToProcess) {
         try {
-          const overrideFields: any = {};
-          if (item.cost !== undefined) overrideFields.cost = Number(item.cost);
-          if (item.price !== undefined) overrideFields.price = Number(item.price);
-          if (item.priceUnits !== undefined) overrideFields.priceUnits = Number(item.priceUnits);
-          if (item.expirationDate !== undefined) overrideFields.expirationDate = item.expirationDate;
+          const { productId, isNewProduct, name, laboratory, category, conversionFactor, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate, minStockAlert, barcode, fotoUrl } = item;
+          const existingProduct = productsList.find(prod => prod.id === productId);
 
-          const success = await adjustProductStock(
-            item.productId,
-            Number(item.quantitySkins) || 0,
-            Number(item.quantityUnits) || 0,
-            overrideFields
-          );
-          if (success) {
+          if (isNewProduct || !existingProduct) {
+            const finalId = (productId && !productId.startsWith("new-prod-"))
+              ? productId
+              : "prod-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4);
+
+            const newProductObj = {
+              id: finalId,
+              name: name || item.productName || "Producto",
+              expirationDate: expirationDate || "2027-12-31",
+              laboratory: laboratory || "General",
+              cost: Number(cost) || 0,
+              price: Number(price) || 0,
+              priceUnits: priceUnits !== undefined && priceUnits !== null ? Number(priceUnits) : undefined,
+              category: category || "General",
+              quantityOnSkins: Number(quantitySkins) || 0,
+              quantityUnits: Number(quantityUnits) || 0,
+              conversionFactor: Number(conversionFactor) || 1,
+              minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
+              barcode: barcode || "",
+              fotoUrl: fotoUrl || "",
+              isActive: true
+            };
+
+            await addProduct(newProductObj);
             restockedCount++;
-            const p = productsList.find(prod => prod.id === item.productId);
-            if (p) {
-              const factor = p.conversionFactor || 1;
-              const itemSkins = Number(item.quantitySkins) || 0;
-              const itemUnits = Number(item.quantityUnits) || 0;
-              const itemCost = Number(item.cost) || p.cost || 0;
+
+            const factor = newProductObj.conversionFactor || 1;
+            const itemSkins = Number(quantitySkins) || 0;
+            const itemUnits = Number(quantityUnits) || 0;
+            const itemCost = Number(cost) || 0;
+            totalInvoiceCost += itemCost * (itemSkins + (factor > 1 ? (itemUnits / factor) : 0));
+          } else {
+            const overrideFields: any = {};
+            if (cost !== undefined && cost !== null && cost > 0) overrideFields.cost = Number(cost);
+            if (price !== undefined && price !== null && price > 0) overrideFields.price = Number(price);
+            if (priceUnits !== undefined && priceUnits !== null && priceUnits > 0) overrideFields.priceUnits = Number(priceUnits);
+            if (expirationDate) overrideFields.expirationDate = expirationDate;
+
+            const success = await adjustProductStock(
+              productId,
+              Number(quantitySkins) || 0,
+              Number(quantityUnits) || 0,
+              overrideFields
+            );
+            if (success) {
+              restockedCount++;
+              const factor = existingProduct.conversionFactor || 1;
+              const itemSkins = Number(quantitySkins) || 0;
+              const itemUnits = Number(quantityUnits) || 0;
+              const itemCost = Number(cost) || existingProduct.cost || 0;
               totalInvoiceCost += itemCost * (itemSkins + (factor > 1 ? (itemUnits / factor) : 0));
             }
           }

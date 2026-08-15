@@ -50,7 +50,10 @@ export default function FacturacionTab() {
           const barcode = buffer.trim();
           buffer = "";
 
-          const match = products.find((p: any) => p.barcode === barcode);
+          const match = products.find((p: any) =>
+            p.barcode === barcode ||
+            (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.includes(barcode))
+          );
           if (match) {
             const isAvailable = (match.quantityOnSkins > 0) || (match.quantityUnits > 0);
             if (isAvailable) {
@@ -79,16 +82,19 @@ export default function FacturacionTab() {
     };
   }, [activeTab, products, handleAddProductToCart]);
 
-  const posSearchResults = products.filter((p: any) => {
-    if (!unifiedQuery.trim()) return false;
-    const q = unifiedQuery.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(q) ||
-      p.laboratory.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q) ||
-      (p.barcode && p.barcode.includes(q))
-    );
-  });
+  const posSearchResults = products
+    .filter((p: any) => {
+      if (!unifiedQuery.trim()) return false;
+      const q = unifiedQuery.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.laboratory && p.laboratory.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+        (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.some((b: string) => b && b.toLowerCase().includes(q)))
+      );
+    })
+    .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "", "es", { sensitivity: "base" }));
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +102,11 @@ export default function FacturacionTab() {
     if (!query) return;
 
     // Find exact barcode or ID match
-    const match = products.find((p: any) => p.barcode === query || p.id === query);
+    const match = products.find((p: any) =>
+      p.id === query ||
+      p.barcode === query ||
+      (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.includes(query))
+    );
     if (match) {
       const isAvailable = (match.quantityOnSkins > 0) || (match.quantityUnits > 0);
       if (isAvailable) {
@@ -114,7 +124,7 @@ export default function FacturacionTab() {
     // Try to find matching products by name
     const matches = products.filter((p: any) => {
       const q = query.toLowerCase();
-      return p.name.toLowerCase().includes(q) || p.laboratory.toLowerCase().includes(q);
+      return p.name.toLowerCase().includes(q) || (p.laboratory && p.laboratory.toLowerCase().includes(q));
     });
 
     if (matches.length === 1) {
@@ -139,7 +149,10 @@ export default function FacturacionTab() {
   };
 
   const handleCameraScan = (barcode: string) => {
-    const match = products.find((p: any) => p.barcode === barcode);
+    const match = products.find((p: any) =>
+      p.barcode === barcode ||
+      (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.includes(barcode))
+    );
     if (match) {
       const isAvailable = (match.quantityOnSkins > 0) || (match.quantityUnits > 0);
       if (isAvailable) {
@@ -229,7 +242,7 @@ export default function FacturacionTab() {
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-950 text-sm">{p.name}</span>
                           <span className="text-slate-500 text-[10.5px]">
-                            {p.laboratory} • {p.category} {p.barcode ? `• Cód: ${p.barcode}` : ""}
+                            {p.laboratory} • {p.category} {(p.barcodes && p.barcodes.length > 0) ? `• Cód: ${p.barcodes.join(', ')}` : (p.barcode ? `• Cód: ${p.barcode}` : "")}
                           </span>
                         </div>
                         <div className="text-right">

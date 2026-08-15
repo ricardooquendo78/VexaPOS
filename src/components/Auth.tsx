@@ -1,143 +1,105 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Package, FileText, TrendingDown, LineChart, User, Settings, Plus, Search, AlertCircle, FileSpreadsheet, Building, CheckCircle, Trash2, Barcode, Printer, X, CreditCard, UserCheck, LogOut, Wifi, WifiOff, RefreshCw, PlusCircle, Info } from 'lucide-react';
-import TechAdvisory from './TechAdvisory';
+import { AlertCircle, CheckCircle, Lock, ShieldCheck, Mail } from 'lucide-react';
 import logoNegro from '../img/Logo en negro.png';
 
 export default function Auth() {
-  const { isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor } = useAppContext();
+  const {
+    loginEmail,
+    setLoginEmail,
+    loginPassword,
+    setLoginPassword,
+    authError,
+    authSuccess,
+    handleLogin,
+    isSyncing
+  } = useAppContext();
 
   return (
-    <>
-      {/* AUTH SECTION */}
-          <div className="max-w-md mx-auto my-12 bg-white rounded-xl border border-slate-200 shadow-md p-6 md:p-8 text-slate-800">
-            <div className="text-center mb-6">
-              <img src={logoNegro} alt="VexaPOS" className="h-16 mx-auto mb-4 object-contain" />
-              <h2 className="text-2xl font-bold text-slate-950">Vexa POS</h2>
-              <p className="text-slate-500 text-sm mt-1">Por favor ingrese sus credenciales para continuar</p>
-            </div>
-
-            {authError && (
-              <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-lg border border-rose-200 mb-4 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{authError}</span>
-              </div>
-            )}
-            
-            {authSuccess && (
-              <div className="p-3 bg-emerald-50 text-emerald-700 text-xs rounded-lg border border-emerald-200 mb-4 flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{authSuccess}</span>
-              </div>
-            )}
-
-            {authMode === "login" ? (
-              <form onSubmit={handleLogin} id="login-form" className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 tracking-wider mb-1">Correo Electrónico</label>
-                  <input
-                    type="email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-slate-250 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-600"
-                    placeholder="email@vexapos.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 tracking-wider mb-1">Contraseña</label>
-                  <input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-slate-250 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-600"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg text-sm font-semibold shadow-xs transition"
-                >
-                  Iniciar Sesión
-                </button>
-                
-                <div className="text-center pt-4 border-t border-slate-100 text-xs text-slate-500">
-                  <span>¿Deseas registrar una nueva cuenta de mostrador? </span>
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode("register")}
-                    className="text-teal-600 font-bold hover:underline"
-                  >
-                    Registrar Cuenta
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 tracking-wider mb-1">Nombre Completo</label>
-                  <input
-                    type="text"
-                    value={registerName}
-                    onChange={(e) => setRegisterName(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-slate-250 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-600"
-                    placeholder="Ej: Daniel Restrepo"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 tracking-wider mb-1">Correo Electrónico</label>
-                  <input
-                    type="email"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-slate-250 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-600"
-                    placeholder="email@vexapos.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 tracking-wider mb-1">Contraseña</label>
-                  <input
-                    type="password"
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-slate-250 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 tracking-wider mb-1">Rol Operativo</label>
-                  <select
-                    value={registerRole}
-                    onChange={(e) => setRegisterRole(e.target.value as "admin" | "worker")}
-                    className="w-full px-3 py-2 border border-slate-250 bg-white rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-600"
-                  >
-                    <option value="worker">Worker (Cajero/Mostrador)</option>
-                    <option value="admin">Admin (Acceso Completo)</option>
-                  </select>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg text-sm font-semibold shadow-xs transition"
-                >
-                  Registrarse
-                </button>
-                <div className="text-center pt-4 border-t border-slate-100 text-xs text-slate-500">
-                  <span>¿Ya tienes una cuenta operativa? </span>
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode("login")}
-                    className="text-teal-600 font-bold hover:underline"
-                  >
-                    Ingresar
-                  </button>
-                </div>
-              </form>
-            )}
-
-
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200/80 shadow-xl p-8 text-slate-800 backdrop-blur-sm">
+        {/* Brand Header */}
+        <div className="text-center mb-8">
+          <img src={logoNegro} alt="VexaPOS" className="h-16 mx-auto mb-4 object-contain" />
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Vexa POS</h2>
+          <p className="text-slate-500 text-sm mt-1">Sistema de Control y Facturación de Droguería</p>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 border border-teal-200/60 rounded-full text-xs font-semibold text-teal-800 mt-3">
+            <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+            <span>Acceso Seguro a Cuentas Autorizadas</span>
           </div>
-    </>
+        </div>
+
+        {/* Feedback Alerts */}
+        {authError && (
+          <div className="p-3.5 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 mb-5 flex items-center gap-2.5 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+            <span className="font-medium">{authError}</span>
+          </div>
+        )}
+        
+        {authSuccess && (
+          <div className="p-3.5 bg-emerald-50 text-emerald-700 text-xs rounded-xl border border-emerald-200 mb-5 flex items-center gap-2.5 animate-in fade-in">
+            <CheckCircle className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+            <span className="font-medium">{authSuccess}</span>
+          </div>
+        )}
+
+        {/* Login Form */}
+        <form onSubmit={handleLogin} id="login-form" className="space-y-5">
+          <div>
+            <label className="block text-xs font-semibold uppercase text-slate-600 tracking-wider mb-1.5">
+              Correo Electrónico
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className="w-full pl-10 pr-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all placeholder:text-slate-400"
+                placeholder="ejemplo@vexapos.com"
+              />
+              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase text-slate-600 tracking-wider mb-1.5">
+              Contraseña
+            </label>
+            <div className="relative">
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className="w-full pl-10 pr-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                placeholder="••••••••"
+              />
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSyncing}
+            className="w-full bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white py-3 rounded-xl text-sm font-semibold shadow-md shadow-teal-700/10 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+          >
+            <Lock className="w-4 h-4" />
+            <span>Ingresar al Sistema</span>
+          </button>
+        </form>
+
+        {/* Security Notice */}
+        <div className="mt-8 pt-5 border-t border-slate-100 text-center">
+          <p className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
+            <Lock className="w-3 h-3 text-slate-400" />
+            Acceso restringido únicamente para personal autorizado.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

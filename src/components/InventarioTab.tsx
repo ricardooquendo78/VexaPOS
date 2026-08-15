@@ -5,12 +5,14 @@ import TechAdvisory from './TechAdvisory';
 import BarcodeScannerModal from './BarcodeScannerModal';
 
 export default function InventarioTab() {
-  const { isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor, handleDeleteSupplier, handleDeleteLab, handleDeleteCat } = useAppContext();
+  const { isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdBarcode2, setNewProdBarcode2, newProdBarcode3, setNewProdBarcode3, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor, handleDeleteSupplier, handleDeleteLab, handleDeleteCat, handleDeleteProduct } = useAppContext();
 
   const [showSuccessModal, setShowSuccessModal] = React.useState(false);
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = React.useState(false);
   const [showBarcodeScannerForNewProduct, setShowBarcodeScannerForNewProduct] = React.useState(false);
   const [showBarcodeScannerForRestock, setShowBarcodeScannerForRestock] = React.useState(false);
-  const [profitPercentage, setProfitPercentage] = React.useState<string>("");
+  const [scannerTarget, setScannerTarget] = React.useState<"new1" | "new2" | "new3" | "edit1" | "edit2" | "edit3" | "restock" | "">("");
+  const [showBarcodeScannerModal, setShowBarcodeScannerModal] = React.useState(false);
   const [showNewSupplierModal, setShowNewSupplierModal] = React.useState(false);
   const [productSearchInput, setProductSearchInput] = React.useState("");
   const [showProductDropdown, setShowProductDropdown] = React.useState(false);
@@ -29,11 +31,89 @@ export default function InventarioTab() {
   }, [restockProductId, products]);
 
   const onSubmitProductForm = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!newProdName || !newProdLab || !newProdCategory) {
-      await handleCreateProduct(e);
+      alert("Por favor diligencie los campos obligatorios (Nombre Comercial, Laboratorio y Categoría).");
       return;
     }
+
+    if (inventoryFormMode === "invoice") {
+      const factor = newProdSellMode === "ambas" ? (Number(newProdFactor) || 10) : 1;
+      let skins = 0;
+      let units = 0;
+      let totalUnits = 0;
+
+      if (newProdSellMode === "ambas") {
+        skins = Number(newProdSkins) || 0;
+        units = Number(newProdUnits) || 0;
+        totalUnits = (skins * factor) + units;
+      } else if (newProdSellMode === "sobres") {
+        skins = Number(newProdSkins) || 0;
+        units = 0;
+        totalUnits = skins;
+      } else { // "unidad"
+        skins = 0;
+        units = Number(newProdUnits) || 0;
+        totalUnits = units;
+      }
+
+      const barcodesList = [newProdBarcode, newProdBarcode2, newProdBarcode3]
+        .map(b => (b || "").trim())
+        .filter(Boolean)
+        .slice(0, 3);
+
+      const newInvoiceItem = {
+        id: "inv-item-" + Date.now(),
+        productId: "new-prod-" + Date.now(),
+        productName: newProdName,
+        laboratory: newProdLab,
+        category: newProdCategory,
+        conversionFactor: factor,
+        quantitySkins: skins,
+        quantityUnits: units,
+        quantityTotalUnits: totalUnits,
+        cost: Number(newProdCost) || 0,
+        price: Number(newProdPrice) || 0,
+        priceUnits: newProdSellMode === "ambas" ? (Number(newProdPriceUnits) || 0) : undefined,
+        expirationDate: newProdExp || "2027-12-31",
+        minStockAlert: (newProdMinAlert !== undefined && newProdMinAlert !== null && newProdMinAlert !== "" && !isNaN(Number(newProdMinAlert))) ? Math.max(0, Number(newProdMinAlert)) : 0,
+        barcode: barcodesList[0] || "",
+        barcodes: barcodesList,
+        fotoUrl: newProdFoto || "",
+        isNewProduct: true
+      };
+
+      setInvoiceItems((prev: any[]) => [...prev, newInvoiceItem]);
+      setSyncLogs((prev: string[]) => [`[Factura] Nuevo producto agregado al borrador de factura: "${newProdName}"`, ...prev]);
+
+      // Reset fields
+      setNewProdName("");
+      setNewProdExp("");
+      setNewProdLab("");
+      setNewProdCost(0);
+      setNewProdPrice(0);
+      setNewProdPriceUnits(0);
+      setNewProdCategory("");
+      setNewProdSkins(0);
+      setNewProdUnits(0);
+      setNewProdFactor(10);
+      setNewProdMinAlert(0);
+      setNewProdBarcode("");
+      setNewProdBarcode2 && setNewProdBarcode2("");
+      setNewProdBarcode3 && setNewProdBarcode3("");
+      setNewProdFoto("");
+      setNewProdSellMode("ambas");
+
+      setShowNewProductModal(false);
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 700);
+      return;
+    }
+
     await handleCreateProduct(e);
+    setShowNewProductModal(false);
     setShowSuccessModal(true);
     setTimeout(() => {
       setShowSuccessModal(false);
@@ -46,7 +126,13 @@ export default function InventarioTab() {
   const [passwordError, setPasswordError] = React.useState("");
   const [isVerifyingPassword, setIsVerifyingPassword] = React.useState(false);
 
-  // Edit product form states
+  // Delete product with password states
+  const [showDeletePasswordPromptForProduct, setShowDeletePasswordPromptForProduct] = React.useState<any>(null);
+  const [deleteEnteredPassword, setDeleteEnteredPassword] = React.useState("");
+  const [deletePasswordError, setDeletePasswordError] = React.useState("");
+  const [isVerifyingDeletePassword, setIsVerifyingDeletePassword] = React.useState(false);
+
+  // Edit product form statess
   const [editName, setEditName] = React.useState("");
   const [editExp, setEditExp] = React.useState("");
   const [editLab, setEditLab] = React.useState("");
@@ -57,8 +143,10 @@ export default function InventarioTab() {
   const [editSkins, setEditSkins] = React.useState<number>(0);
   const [editUnits, setEditUnits] = React.useState<number>(0);
   const [editFactor, setEditFactor] = React.useState<number>(1);
-  const [editMinAlert, setEditMinAlert] = React.useState<number>(5);
+  const [editMinAlert, setEditMinAlert] = React.useState<number>(0);
   const [editBarcode, setEditBarcode] = React.useState("");
+  const [editBarcode2, setEditBarcode2] = React.useState("");
+  const [editBarcode3, setEditBarcode3] = React.useState("");
   const [editFoto, setEditFoto] = React.useState("");
   const [editSellMode, setEditSellMode] = React.useState<"unidad" | "sobres" | "ambas">("ambas");
   const [editProfitPercentage, setEditProfitPercentage] = React.useState<string>("");
@@ -144,15 +232,20 @@ export default function InventarioTab() {
           setEditName(p.name);
           setEditExp(p.expirationDate || "");
           setEditLab(p.laboratory);
-          setEditCost(p.cost);
-          setEditPrice(p.price);
+          setEditCost(p.cost || 0);
+          setEditPrice(p.price || 0);
           setEditPriceUnits(p.priceUnits || 0);
           setEditCategory(p.category);
-          setEditSkins(p.quantityOnSkins);
-          setEditUnits(p.quantityUnits);
+          setEditSkins(p.quantityOnSkins || 0);
+          setEditUnits(p.quantityUnits || 0);
           setEditFactor(p.conversionFactor || 1);
-          setEditMinAlert(p.minStockAlert || 5);
-          setEditBarcode(p.barcode || "");
+          setEditMinAlert(p.minStockAlert !== undefined && p.minStockAlert !== null ? p.minStockAlert : 0);
+          const bList = (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.length > 0)
+            ? p.barcodes
+            : (p.barcode ? [p.barcode] : []);
+          setEditBarcode(bList[0] || "");
+          setEditBarcode2(bList[1] || "");
+          setEditBarcode3(bList[2] || "");
           setEditFoto(p.fotoUrl || "");
           setEditSellMode(p.conversionFactor > 1 ? "ambas" : (p.priceUnits ? "unidad" : "sobres"));
           setEditProfitPercentage("");
@@ -166,6 +259,40 @@ export default function InventarioTab() {
       setPasswordError("Error de conexión al verificar la contraseña.");
     } finally {
       setIsVerifyingPassword(false);
+    }
+  };
+
+  const handleVerifyDeletePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !showDeletePasswordPromptForProduct) return;
+    setDeletePasswordError("");
+    setIsVerifyingDeletePassword(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: currentUser.email, password: deleteEnteredPassword })
+      });
+      const data = await response.json();
+      if (data.success) {
+        const prodId = showDeletePasswordPromptForProduct.id;
+        setShowDeletePasswordPromptForProduct(null);
+        setDeleteEnteredPassword("");
+        setDeletePasswordError("");
+
+        await handleDeleteProduct(prodId);
+        setShowDeleteSuccessModal(true);
+        setTimeout(() => {
+          setShowDeleteSuccessModal(false);
+        }, 1200);
+      } else {
+        setDeletePasswordError("Contraseña incorrecta. Inténtelo de nuevo.");
+      }
+    } catch (err) {
+      setDeletePasswordError("Error de conexión al verificar la contraseña.");
+    } finally {
+      setIsVerifyingDeletePassword(false);
     }
   };
 
@@ -191,6 +318,11 @@ export default function InventarioTab() {
       savedUnits = (Number(editUnits) || 0) % savedFactor;
     }
 
+    const barcodesList = [editBarcode, editBarcode2, editBarcode3]
+      .map(b => (b || "").trim())
+      .filter(Boolean)
+      .slice(0, 3);
+
     const payload = {
       id: editingProduct.id,
       name: editName,
@@ -203,8 +335,9 @@ export default function InventarioTab() {
       quantityOnSkins: savedSkins,
       quantityUnits: savedUnits,
       conversionFactor: savedFactor,
-      minStockAlert: Number(editMinAlert) || 5,
-      barcode: editBarcode,
+      minStockAlert: (editMinAlert !== undefined && editMinAlert !== null && editMinAlert !== "" && !isNaN(Number(editMinAlert))) ? Math.max(0, Number(editMinAlert)) : 0,
+      barcode: barcodesList[0] || "",
+      barcodes: barcodesList,
       fotoUrl: editFoto || "",
     };
 
@@ -590,20 +723,10 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
+                              placeholder="0"
                               value={newProdCost || ""}
-                              onChange={(e) => handleCostChange(Number(e.target.value))}
-                              className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia (Ayuda Costo)</label>
-                            <input
-                              type="number"
-                              min="0"
-                              placeholder="Ej: 30"
-                              value={profitPercentage || ""}
-                              onChange={(e) => handlePercentageChange(e.target.value)}
-                              className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
+                              onChange={(e) => setNewProdCost(Number(e.target.value))}
+                              className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
                           </div>
                           <div>
@@ -611,8 +734,9 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
+                              placeholder="0"
                               value={newProdPrice || ""}
-                              onChange={(e) => handlePriceChange(Number(e.target.value))}
+                              onChange={(e) => setNewProdPrice(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
                           </div>
@@ -621,6 +745,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
+                              placeholder="0"
                               value={newProdSkins || ""}
                               onChange={(e) => setNewProdSkins(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
@@ -636,20 +761,10 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
+                              placeholder="0"
                               value={newProdCost || ""}
-                              onChange={(e) => handleCostChange(Number(e.target.value))}
-                              className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia (Ayuda Costo)</label>
-                            <input
-                              type="number"
-                              min="0"
-                              placeholder="Ej: 30"
-                              value={profitPercentage || ""}
-                              onChange={(e) => handlePercentageChange(e.target.value)}
-                              className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
+                              onChange={(e) => setNewProdCost(Number(e.target.value))}
+                              className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
                           </div>
                           <div>
@@ -657,8 +772,9 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
+                              placeholder="0"
                               value={newProdPrice || ""}
-                              onChange={(e) => handlePriceChange(Number(e.target.value))}
+                              onChange={(e) => setNewProdPrice(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
                           </div>
@@ -667,6 +783,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
+                              placeholder="0"
                               value={newProdSkins || ""}
                               onChange={(e) => setNewProdSkins(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
@@ -682,20 +799,10 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
+                              placeholder="0"
                               value={newProdCost || ""}
-                              onChange={(e) => handleCostChange(Number(e.target.value))}
-                              className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia (Ayuda Costo)</label>
-                            <input
-                              type="number"
-                              min="0"
-                              placeholder="Ej: 30"
-                              value={profitPercentage || ""}
-                              onChange={(e) => handlePercentageChange(e.target.value)}
-                              className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
+                              onChange={(e) => setNewProdCost(Number(e.target.value))}
+                              className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
                           </div>
                           <div>
@@ -703,8 +810,9 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
+                              placeholder="0"
                               value={newProdPrice || ""}
-                              onChange={(e) => handlePriceChange(Number(e.target.value))}
+                              onChange={(e) => setNewProdPrice(Number(e.target.value))}
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
                           </div>
@@ -715,12 +823,12 @@ export default function InventarioTab() {
                               min="0"
                               value={newProdPriceUnits || ""}
                               onChange={(e) => setNewProdPriceUnits(Number(e.target.value))}
-                              placeholder="Ej: 500"
+                              placeholder="0"
                               className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold text-teal-700"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-semibold text-teal-700 uppercase tracking-wide text-[11px] font-bold mb-1">¿Cuántas unidades tiene cada sobre? *</label>
+                            <label className="block text-xs font-semibold text-teal-700 uppercase tracking-wide text-[11px] font-bold mb-1">¿Unidades por sobre? *</label>
                             <input
                               type="number"
                               min="1"
@@ -731,7 +839,7 @@ export default function InventarioTab() {
                                 const total = newProdSkins * newFactor;
                                 setNewProdUnits(total);
                               }}
-                              placeholder="Ej: 10 pastillas"
+                              placeholder="Ej: 10"
                               className="w-full px-3 py-1.5 border border-teal-200 bg-teal-50/20 rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-bold"
                             />
                           </div>
@@ -740,6 +848,7 @@ export default function InventarioTab() {
                             <input
                               type="number"
                               min="0"
+                              placeholder="0"
                               value={newProdSkins || ""}
                               onChange={(e) => {
                                 const newSkins = Math.max(0, Number(e.target.value));
@@ -758,6 +867,7 @@ export default function InventarioTab() {
                               <input
                                 type="number"
                                 min="0"
+                                placeholder="0"
                                 value={newProdUnits || ""}
                                 onChange={(e) => {
                                   const newUnits = Math.max(0, Number(e.target.value));
@@ -777,35 +887,131 @@ export default function InventarioTab() {
                         </>
                       )}
 
+                      {/* Tarjeta de Margen Calculado Automáticamente */}
+                      {Number(newProdCost) > 0 && Number(newProdPrice) > 0 && (
+                        <div className="md:col-span-4 bg-teal-50 border border-teal-200/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
+                              %
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Margen Automático Calculado:</span>
+                              <span className="text-sm font-extrabold text-teal-800">
+                                +{Math.round(((Number(newProdPrice) - Number(newProdCost)) / Number(newProdCost)) * 100)}% de ganancia
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Ganancia Bruta Estimada:</span>
+                            <span className="text-xs font-black text-teal-900">
+                              +${(Number(newProdPrice) - Number(newProdCost)).toLocaleString("es-CO")} {newProdSellMode === "unidad" ? "x unidad" : "x caja/sobre"}
+                            </span>
+                          </div>
+                          {newProdSellMode === "ambas" && Number(newProdFactor) > 1 && Number(newProdPriceUnits) > 0 && (
+                            <div className="w-full pt-2 mt-1 border-t border-teal-200/60 flex items-center justify-between text-xs">
+                              <span className="text-teal-800 font-semibold text-[11px]">
+                                Pastilla / Fracción suelta (${Number(newProdPriceUnits).toLocaleString("es-CO")}):
+                              </span>
+                              <span className="font-bold text-emerald-800">
+                                +{Math.round(((Number(newProdPriceUnits) - (Number(newProdCost) / Number(newProdFactor))) / (Number(newProdCost) / Number(newProdFactor))) * 100)}% ganancia (+${Math.round(Number(newProdPriceUnits) - (Number(newProdCost) / Number(newProdFactor))).toLocaleString("es-CO")}/u)
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Umbral Stock Mínimo (Pastillas eq)</label>
                         <input
                           type="number"
-                          value={newProdMinAlert || ""}
-                          onChange={(e) => setNewProdMinAlert(Number(e.target.value))}
+                          min="0"
+                          placeholder="0"
+                          value={newProdMinAlert !== undefined && newProdMinAlert !== null && newProdMinAlert !== 0 ? newProdMinAlert : (newProdMinAlert === 0 ? "0" : "")}
+                          onChange={(e) => setNewProdMinAlert(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                           className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center justify-between">
-                          <span>Código de Barras</span>
-                          <button
-                            type="button"
-                            onClick={() => setShowBarcodeScannerForNewProduct(true)}
-                            className="text-teal-650 hover:text-teal-800 text-[10.5px] font-bold flex items-center gap-1 transition cursor-pointer"
-                          >
-                            <Camera className="w-3.5 h-3.5" />
-                            Escanear
-                          </button>
-                        </label>
-                        <input
-                          type="text"
-                          value={newProdBarcode}
-                          onChange={(e) => setNewProdBarcode(e.target.value)}
-                          placeholder="Ej: 7702008123456"
-                          className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs focus:ring-1 focus:ring-teal-600 font-mono"
-                        />
+                      {/* 3 Códigos de Barras */}
+                      <div className="md:col-span-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                        <div className="mb-2">
+                          <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                            Códigos de Barras (Máximo 3)
+                          </label>
+                          <span className="text-[11px] text-slate-500">
+                            El sistema y el lector láser encontrarán el producto por cualquiera de estos 3 códigos.
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Código 1 (Principal)</label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setScannerTarget("new1");
+                                  setShowBarcodeScannerModal(true);
+                                }}
+                                className="text-teal-600 hover:text-teal-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                              >
+                                <Camera className="w-3 h-3" /> Escanear
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Ej: 7702008123456"
+                              value={newProdBarcode || ""}
+                              onChange={(e) => setNewProdBarcode(e.target.value)}
+                              className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-teal-600"
+                            />
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Código 2 (Opcional)</label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setScannerTarget("new2");
+                                  setShowBarcodeScannerModal(true);
+                                }}
+                                className="text-teal-600 hover:text-teal-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                              >
+                                <Camera className="w-3 h-3" /> Escanear
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Segundo código..."
+                              value={newProdBarcode2 || ""}
+                              onChange={(e) => setNewProdBarcode2 && setNewProdBarcode2(e.target.value)}
+                              className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-teal-600"
+                            />
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Código 3 (Opcional)</label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setScannerTarget("new3");
+                                  setShowBarcodeScannerModal(true);
+                                }}
+                                className="text-teal-600 hover:text-teal-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                              >
+                                <Camera className="w-3 h-3" /> Escanear
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Tercer código..."
+                              value={newProdBarcode3 || ""}
+                              onChange={(e) => setNewProdBarcode3 && setNewProdBarcode3(e.target.value)}
+                              className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-teal-600"
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       <div>
@@ -974,8 +1180,9 @@ export default function InventarioTab() {
                                         if (isSelected && productSearchInput === `${p.name} (${p.laboratory})`) return true;
                                         
                                         return p.name.toLowerCase().includes(query) || 
-                                               p.laboratory.toLowerCase().includes(query) ||
-                                               (p.barcode && p.barcode.includes(query));
+                                               (p.laboratory && p.laboratory.toLowerCase().includes(query)) ||
+                                               (p.barcode && p.barcode.toLowerCase().includes(query)) ||
+                                               (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.some(b => b && b.toLowerCase().includes(query)));
                                       })
                                       .sort((a, b) => a.name.localeCompare(b.name))
                                       .map(p => (
@@ -985,8 +1192,8 @@ export default function InventarioTab() {
                                             setRestockProductId(p.id);
                                             setProductSearchInput(`${p.name} (${p.laboratory})`);
                                             setShowProductDropdown(false);
-                                            setRestockCost(p.cost);
-                                            setRestockPrice(p.price);
+                                            setRestockCost(p.cost || 0);
+                                            setRestockPrice(p.price || 0);
                                             setRestockPriceUnits(p.priceUnits || 0);
                                             setRestockExp(p.expirationDate || "");
                                             setRestockTotalUnits(p.conversionFactor > 1 ? p.conversionFactor : 0);
@@ -998,11 +1205,17 @@ export default function InventarioTab() {
                                         >
                                           <div>
                                             <span className="block font-bold">{p.name}</span>
-                                            <span className="block text-[10px] text-slate-500 mt-0.5">{p.laboratory}</span>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                              <span className="text-[10px] text-slate-500">{p.laboratory}</span>
+                                              <span className="text-[10px] text-slate-300">•</span>
+                                              <span className="text-[10px] text-slate-500 font-medium">
+                                                Stock: <strong className="text-slate-700">{p.quantityOnSkins} sob{p.conversionFactor > 1 ? ` + ${p.quantityUnits}u` : ''}</strong>
+                                              </span>
+                                            </div>
                                           </div>
-                                          {p.barcode && (
-                                            <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1 py-0.5 rounded">
-                                              {p.barcode}
+                                          {((p.barcodes && p.barcodes.length > 0) || p.barcode) && (
+                                            <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1 py-0.5 rounded border border-slate-200">
+                                              {(p.barcodes && p.barcodes.length > 0) ? p.barcodes.join(' / ') : p.barcode}
                                             </span>
                                           )}
                                         </div>
@@ -1011,7 +1224,10 @@ export default function InventarioTab() {
                                         const query = productSearchInput.toLowerCase();
                                         const isSelected = restockProductId === p.id;
                                         if (isSelected && productSearchInput === `${p.name} (${p.laboratory})`) return true;
-                                        return p.name.toLowerCase().includes(query) || p.laboratory.toLowerCase().includes(query) || (p.barcode && p.barcode.includes(query));
+                                        return p.name.toLowerCase().includes(query) ||
+                                               (p.laboratory && p.laboratory.toLowerCase().includes(query)) ||
+                                               (p.barcode && p.barcode.toLowerCase().includes(query)) ||
+                                               (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.some(b => b && b.toLowerCase().includes(query)));
                                       }).length === 0 && (
                                         <div className="p-3 text-center text-xs text-slate-500 italic">
                                           No se encontraron productos similares.
@@ -1021,21 +1237,36 @@ export default function InventarioTab() {
                                 </>
                               )}
                             </div>
+                            {restockSelectedProduct && (
+                              <div className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-slate-500 bg-slate-100/90 px-2.5 py-1 rounded-md border border-slate-200">
+                                <Info className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
+                                <span>
+                                  Stock actual en inventario: <strong className="text-slate-800">{restockSelectedProduct.quantityOnSkins} {restockSelectedProduct.conversionFactor > 1 ? 'sobres/cajas' : 'unidades'}</strong>
+                                  {restockSelectedProduct.conversionFactor > 1 && (
+                                    <span> y <strong className="text-slate-800">{restockSelectedProduct.quantityUnits} pastillas</strong></span>
+                                  )}
+                                  {" "}(Total: <strong className="text-teal-700">{(restockSelectedProduct.quantityOnSkins * restockSelectedProduct.conversionFactor) + restockSelectedProduct.quantityUnits} u eq</strong>)
+                                </span>
+                              </div>
+                            )}
                             <button
                               type="button"
                               onClick={() => setShowNewProductModal(true)}
                               className="mt-2 text-[11px] text-teal-700 hover:text-teal-950 font-bold flex items-center gap-1 cursor-pointer transition-all hover:underline"
                             >
                               <PlusCircle className="w-3.5 h-3.5" />
-                              <span>Crear Nuevo Producto</span>
+                              <span>+ Crear Nuevo Producto (Adicionar a Factura)</span>
                             </button>
                           </div>
                            <div className="col-span-4">
                             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 flex items-center justify-between">
-                              <span>Escanear</span>
+                              <span>Lector Cód.</span>
                               <button
                                 type="button"
-                                onClick={() => setShowBarcodeScannerForRestock(true)}
+                                onClick={() => {
+                                  setScannerTarget("restock");
+                                  setShowBarcodeScannerModal(true);
+                                }}
                                 className="text-teal-650 hover:text-teal-850 cursor-pointer"
                                 title="Escanear con cámara"
                               >
@@ -1049,13 +1280,17 @@ export default function InventarioTab() {
                                 if (e.key === 'Enter') {
                                   e.preventDefault();
                                   const target = e.target as HTMLInputElement;
-                                  const barcode = target.value.trim();
+                                  const barcode = target.value.trim().toLowerCase();
                                   if (barcode) {
-                                    const found = products.find(p => p.barcode === barcode);
+                                    const found = products.find(p =>
+                                      p.id.toLowerCase() === barcode ||
+                                      (p.barcode && p.barcode.toLowerCase() === barcode) ||
+                                      (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.some(b => b && b.toLowerCase() === barcode))
+                                    );
                                     if (found) {
                                       setRestockProductId(found.id);
-                                      setRestockCost(found.cost);
-                                      setRestockPrice(found.price);
+                                      setRestockCost(found.cost || 0);
+                                      setRestockPrice(found.price || 0);
                                       setRestockPriceUnits(found.priceUnits || 0);
                                       setRestockExp(found.expirationDate || "");
                                       setRestockTotalUnits(found.conversionFactor > 1 ? found.conversionFactor : 0);
@@ -1242,8 +1477,17 @@ export default function InventarioTab() {
                                 return (
                                   <tr key={item.id} className="hover:bg-slate-50/50 transition font-medium text-slate-800">
                                     <td className="p-3">
-                                      <div className="font-bold text-slate-900">{item.productName}</div>
-                                      <div className="text-[10px] text-slate-500 mt-0.5">{item.laboratory}</div>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-bold text-slate-900">{item.productName}</span>
+                                        {item.isNewProduct && (
+                                          <span className="px-1.5 py-0.5 rounded text-[9.5px] font-black bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-0.5 shadow-2xs">
+                                            ★ Nuevo en Factura
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-[10px] text-slate-500 mt-0.5">
+                                        {item.laboratory} {item.category ? `• ${item.category}` : ''}
+                                      </div>
                                     </td>
                                     <td className="p-3 text-center">
                                       {item.conversionFactor > 1 ? (
@@ -1589,8 +1833,9 @@ export default function InventarioTab() {
                           </tr>
                         ) : (
                           filteredProducts.map(p => {
+                            const minAlertVal = p.minStockAlert !== undefined && p.minStockAlert !== null ? p.minStockAlert : 0;
                             const totalUnits = (p.quantityOnSkins * p.conversionFactor) + p.quantityUnits;
-                            const isLowStock = totalUnits <= p.minStockAlert;
+                            const isLowStock = totalUnits <= minAlertVal;
                             const dateExpiry = p.expirationDate ? new Date(p.expirationDate) : null;
                             const monthsToExpiry = dateExpiry && !isNaN(dateExpiry.getTime())
                               ? (dateExpiry.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30)
@@ -1618,7 +1863,15 @@ export default function InventarioTab() {
                                     )}
                                     <div>
                                       <span>{p.name}</span>
-                                      {p.barcode && <span className="block font-mono text-[9px] text-slate-400">Barcode: {p.barcode}</span>}
+                                      {((p.barcodes && p.barcodes.length > 0) || p.barcode) && (
+                                        <div className="flex flex-wrap gap-1 mt-0.5">
+                                          {((p.barcodes && p.barcodes.length > 0) ? p.barcodes : [p.barcode]).map((b: string, idx: number) => (
+                                            <span key={idx} className="inline-block font-mono text-[9px] text-slate-500 bg-slate-100 px-1 py-0.5 rounded border border-slate-200">
+                                              {b}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </td>
@@ -1641,7 +1894,7 @@ export default function InventarioTab() {
                                   {isLowStock ? (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                                       <AlertCircle className="w-3 h-3" />
-                                      Stock Alerta (&lt;{p.minStockAlert})
+                                      Stock Alerta (≤{minAlertVal})
                                     </span>
                                   ) : (
                                     <span className="text-[10.5px] text-emerald-600 font-bold">✔ Suficiente</span>
@@ -1653,13 +1906,28 @@ export default function InventarioTab() {
                                   </span>
                                 </td>
                                 <td className="p-3 text-center">
-                                  <button
-                                    onClick={() => setShowPasswordPromptForProduct(p)}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
-                                  >
-                                    <Settings className="w-3.5 h-3.5" />
-                                    <span>Editar</span>
-                                  </button>
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      onClick={() => setShowPasswordPromptForProduct(p)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer"
+                                      title="Editar producto (requiere contraseña)"
+                                    >
+                                      <Settings className="w-3.5 h-3.5" />
+                                      <span>Editar</span>
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setShowDeletePasswordPromptForProduct(p);
+                                        setDeleteEnteredPassword("");
+                                        setDeletePasswordError("");
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-100 transition-colors cursor-pointer"
+                                      title="Eliminar producto (requiere contraseña)"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Eliminar</span>
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1680,6 +1948,43 @@ export default function InventarioTab() {
             </div>
           </div>
         )}
+      {showBarcodeScannerModal && (
+        <BarcodeScannerModal
+          onScan={(code) => {
+            if (scannerTarget === "new1") setNewProdBarcode(code);
+            else if (scannerTarget === "new2") setNewProdBarcode2 && setNewProdBarcode2(code);
+            else if (scannerTarget === "new3") setNewProdBarcode3 && setNewProdBarcode3(code);
+            else if (scannerTarget === "edit1") setEditBarcode(code);
+            else if (scannerTarget === "edit2") setEditBarcode2(code);
+            else if (scannerTarget === "edit3") setEditBarcode3(code);
+            else if (scannerTarget === "restock") {
+              const clean = code.trim().toLowerCase();
+              const found = products.find(p =>
+                p.id.toLowerCase() === clean ||
+                (p.barcode && p.barcode.toLowerCase() === clean) ||
+                (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.some(b => b && b.toLowerCase() === clean))
+              );
+              if (found) {
+                setRestockProductId(found.id);
+                setRestockCost(found.cost || 0);
+                setRestockPrice(found.price || 0);
+                setRestockPriceUnits(found.priceUnits || 0);
+                setRestockExp(found.expirationDate || "");
+                setRestockTotalUnits(found.conversionFactor > 1 ? found.conversionFactor : 0);
+                setRestockSkins(found.conversionFactor > 1 ? 1 : 0);
+              } else {
+                alert(`No se encontró producto con código: ${code}`);
+              }
+            }
+            setShowBarcodeScannerModal(false);
+            setScannerTarget("");
+          }}
+          onClose={() => {
+            setShowBarcodeScannerModal(false);
+            setScannerTarget("");
+          }}
+        />
+      )}
       {showBarcodeScannerForNewProduct && (
         <BarcodeScannerModal
           onScan={(code) => {
@@ -1692,11 +1997,16 @@ export default function InventarioTab() {
       {showBarcodeScannerForRestock && (
         <BarcodeScannerModal
           onScan={(code) => {
-            const found = products.find(p => p.barcode === code);
+            const clean = code.trim().toLowerCase();
+            const found = products.find(p =>
+              p.id.toLowerCase() === clean ||
+              (p.barcode && p.barcode.toLowerCase() === clean) ||
+              (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.some(b => b && b.toLowerCase() === clean))
+            );
             if (found) {
               setRestockProductId(found.id);
-              setRestockCost(found.cost);
-              setRestockPrice(found.price);
+              setRestockCost(found.cost || 0);
+              setRestockPrice(found.price || 0);
               setRestockPriceUnits(found.priceUnits || 0);
               setRestockExp(found.expirationDate || "");
               setRestockTotalUnits(found.conversionFactor > 1 ? found.conversionFactor : 0);
@@ -1763,19 +2073,112 @@ export default function InventarioTab() {
                     setEnteredPassword("");
                     setPasswordError("");
                   }}
-                  className="px-4 py-1.5 border hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700"
+                  className="px-4 py-1.5 border hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isVerifyingPassword}
-                  className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 disabled:opacity-50"
+                  className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
                 >
                   {isVerifyingPassword ? "Verificando..." : "Validar y Continuar"}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showDeletePasswordPromptForProduct && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden text-slate-800 border border-rose-100">
+            <div className="p-4 bg-rose-700 text-white flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-rose-200" />
+                <h4 className="font-bold text-sm">Eliminar Producto - Validación de Seguridad</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeletePasswordPromptForProduct(null);
+                  setDeleteEnteredPassword("");
+                  setDeletePasswordError("");
+                }}
+                className="text-rose-200 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleVerifyDeletePasswordSubmit} className="p-6 space-y-4">
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-900 leading-relaxed">
+                <p className="font-bold mb-1 text-rose-800">⚠️ Esta acción no se puede deshacer.</p>
+                <p>
+                  Está a punto de eliminar permanentemente del inventario el producto <strong>"{showDeletePasswordPromptForProduct.name}"</strong> ({showDeletePasswordPromptForProduct.laboratory}).
+                </p>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Por motivos de seguridad, confirme ingresando la contraseña de su cuenta (<strong>{currentUser?.email}</strong>):
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Contraseña de Administrador *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Ingrese su contraseña"
+                  value={deleteEnteredPassword}
+                  onChange={(e) => setDeleteEnteredPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-xs focus:ring-2 focus:ring-rose-500"
+                  autoFocus
+                />
+              </div>
+
+              {deletePasswordError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-lg text-xs text-rose-800 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{deletePasswordError}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2.5 pt-2 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeletePasswordPromptForProduct(null);
+                    setDeleteEnteredPassword("");
+                    setDeletePasswordError("");
+                  }}
+                  className="px-4 py-2 border hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVerifyingDeletePassword}
+                  className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm shadow-rose-200"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {isVerifyingDeletePassword ? "Verificando..." : "Confirmar y Eliminar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteSuccessModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl text-center max-w-xs w-full animate-scale-up border border-rose-100">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h4 className="font-bold text-slate-800 text-sm">¡Producto Eliminado!</h4>
+            <p className="text-xs text-slate-500 mt-1">El producto se retiró del inventario correctamente.</p>
           </div>
         </div>
       )}
@@ -1856,18 +2259,6 @@ export default function InventarioTab() {
                   </select>
                 </div>
 
-                {/* Barcode */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Código de Barras (EAN / UPC)</label>
-                  <input
-                    type="text"
-                    placeholder="Código leído por escáner"
-                    value={editBarcode}
-                    onChange={(e) => setEditBarcode(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-mono"
-                  />
-                </div>
-
                 {/* Sell Mode */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Modalidad de Venta *</label>
@@ -1889,13 +2280,28 @@ export default function InventarioTab() {
                     <input
                       type="number"
                       required
-                      min="2"
+                      min="1"
+                      placeholder="Ej: 10"
                       value={editFactor || ""}
                       onChange={(e) => setEditFactor(Number(e.target.value))}
                       className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold text-teal-800"
                     />
                   </div>
                 )}
+
+                {/* Cost (Net Cost) */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo Neto de Compra ($) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    placeholder="0"
+                    value={editCost || ""}
+                    onChange={(e) => setEditCost(Number(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold"
+                  />
+                </div>
 
                 {/* Price (Sale Price) */}
                 <div>
@@ -1905,36 +2311,11 @@ export default function InventarioTab() {
                   <input
                     type="number"
                     required
-                    min="1"
-                    value={editPrice || ""}
-                    onChange={(e) => handleEditPriceChange(Number(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold text-teal-900"
-                  />
-                </div>
-
-                {/* Profit percentage helper */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-550 uppercase tracking-wider mb-1">% Ganancia Deseado (Calculadora Ayuda)</label>
-                  <input
-                    type="number"
                     min="0"
-                    placeholder="Ej: 30"
-                    value={editProfitPercentage}
-                    onChange={(e) => handleEditPercentageChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-amber-300 rounded-lg bg-amber-50/50 text-xs font-bold text-amber-900 focus:ring-1 focus:ring-amber-500"
-                  />
-                </div>
-
-                {/* Cost (Net Cost) */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Costo Neto de Compra ($) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={editCost || ""}
-                    onChange={(e) => handleEditCostChange(Number(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold"
+                    placeholder="0"
+                    value={editPrice || ""}
+                    onChange={(e) => setEditPrice(Number(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold text-teal-900"
                   />
                 </div>
 
@@ -1945,11 +2326,45 @@ export default function InventarioTab() {
                     <input
                       type="number"
                       required
-                      min="1"
+                      min="0"
+                      placeholder="0"
                       value={editPriceUnits || ""}
                       onChange={(e) => setEditPriceUnits(Number(e.target.value))}
                       className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold text-emerald-800"
                     />
+                  </div>
+                )}
+
+                {/* Margen Calculado Automático */}
+                {Number(editCost) > 0 && Number(editPrice) > 0 && (
+                  <div className="md:col-span-2 bg-teal-50 border border-teal-200/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
+                        %
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Margen Automático:</span>
+                        <span className="text-sm font-extrabold text-teal-800">
+                          +{Math.round(((Number(editPrice) - Number(editCost)) / Number(editCost)) * 100)}% de ganancia
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Ganancia Bruta:</span>
+                      <span className="text-xs font-black text-teal-900">
+                        +${(Number(editPrice) - Number(editCost)).toLocaleString("es-CO")} {editSellMode === "unidad" ? "x unidad" : "x caja/sobre"}
+                      </span>
+                    </div>
+                    {editSellMode === "ambas" && Number(editFactor) > 1 && Number(editPriceUnits) > 0 && (
+                      <div className="w-full pt-2 mt-1 border-t border-teal-200/60 flex items-center justify-between text-xs">
+                        <span className="text-teal-800 font-semibold text-[11px]">
+                          Pastilla / Fracción suelta (${Number(editPriceUnits).toLocaleString("es-CO")}):
+                        </span>
+                        <span className="font-bold text-emerald-800">
+                          +{Math.round(((Number(editPriceUnits) - (Number(editCost) / Number(editFactor))) / (Number(editCost) / Number(editFactor))) * 100)}% (+${Math.round(Number(editPriceUnits) - (Number(editCost) / Number(editFactor))).toLocaleString("es-CO")}/u)
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1960,6 +2375,7 @@ export default function InventarioTab() {
                     type="number"
                     required
                     min="0"
+                    placeholder="0"
                     value={editSkins || ""}
                     onChange={(e) => setEditSkins(Number(e.target.value))}
                     className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold"
@@ -1974,6 +2390,7 @@ export default function InventarioTab() {
                       type="number"
                       required
                       min="0"
+                      placeholder="0"
                       value={editUnits || ""}
                       onChange={(e) => setEditUnits(Number(e.target.value))}
                       className="w-full px-3 py-2 border rounded-lg bg-white text-xs"
@@ -1986,12 +2403,94 @@ export default function InventarioTab() {
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Umbral Alerta Stock Mínimo (Unidades) *</label>
                   <input
                     type="number"
-                    required
-                    min="1"
-                    value={editMinAlert || ""}
-                    onChange={(e) => setEditMinAlert(Number(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs"
+                    min="0"
+                    placeholder="0"
+                    value={editMinAlert !== undefined && editMinAlert !== null && editMinAlert !== 0 ? editMinAlert : (editMinAlert === 0 ? "0" : "")}
+                    onChange={(e) => setEditMinAlert(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
+                    className="w-full px-3 py-2 border rounded-lg bg-white text-xs font-bold"
                   />
+                </div>
+
+                {/* 3 Códigos de Barras en Edición */}
+                <div className="md:col-span-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <div className="mb-2">
+                    <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      Códigos de Barras (Hasta 3)
+                    </label>
+                    <span className="text-[11px] text-slate-500">
+                      Búsqueda y lectura láser habilitada para cualquiera de los códigos.
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Código 1 (Principal)</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScannerTarget("edit1");
+                            setShowBarcodeScannerModal(true);
+                          }}
+                          className="text-teal-600 hover:text-teal-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Camera className="w-3 h-3" /> Escanear
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Ej: 7702008123456"
+                        value={editBarcode || ""}
+                        onChange={(e) => setEditBarcode(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-teal-600"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Código 2 (Opcional)</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScannerTarget("edit2");
+                            setShowBarcodeScannerModal(true);
+                          }}
+                          className="text-teal-600 hover:text-teal-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Camera className="w-3 h-3" /> Escanear
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Segundo código..."
+                        value={editBarcode2 || ""}
+                        onChange={(e) => setEditBarcode2(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-teal-600"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Código 3 (Opcional)</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScannerTarget("edit3");
+                            setShowBarcodeScannerModal(true);
+                          }}
+                          className="text-teal-600 hover:text-teal-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Camera className="w-3 h-3" /> Escanear
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Tercer código..."
+                        value={editBarcode3 || ""}
+                        onChange={(e) => setEditBarcode3(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-teal-600"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Image uploader / preview */}
@@ -2149,8 +2648,19 @@ export default function InventarioTab() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-2xl w-full overflow-hidden flex flex-col my-8 transform scale-100 animate-in fade-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-slate-150 flex justify-between items-center bg-slate-50">
               <div>
-                <h3 className="font-black text-slate-900 text-sm uppercase tracking-wide">Registrar Nuevo Producto</h3>
-                <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Crea una nueva referencia en tu catálogo de productos.</p>
+                <h3 className="font-black text-slate-900 text-sm uppercase tracking-wide flex items-center gap-2">
+                  <span>{inventoryFormMode === "invoice" ? "Crear Producto para la Factura" : "Registrar Nuevo Producto"}</span>
+                  {inventoryFormMode === "invoice" && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black bg-teal-100 text-teal-900 border border-teal-300">
+                      Borrador de Factura
+                    </span>
+                  )}
+                </h3>
+                <p className="text-[10.5px] text-slate-500 font-semibold mt-0.5">
+                  {inventoryFormMode === "invoice"
+                    ? "El producto se adicionará con su cantidad y precios a la factura actual y entrará al inventario al confirmar."
+                    : "Crea una nueva referencia en tu catálogo de productos."}
+                </p>
               </div>
               <button
                 type="button"
@@ -2162,10 +2672,7 @@ export default function InventarioTab() {
             </div>
 
             <form
-              onSubmit={async (e) => {
-                await onSubmitProductForm(e);
-                setShowNewProductModal(false);
-              }}
+              onSubmit={onSubmitProductForm}
               className="p-5 space-y-4 max-h-[75vh] overflow-y-auto"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2287,20 +2794,10 @@ export default function InventarioTab() {
                       <input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={newProdCost || ""}
-                        onChange={(e) => handleCostChange(Number(e.target.value))}
+                        onChange={(e) => setNewProdCost(Number(e.target.value))}
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Ej: 30"
-                        value={profitPercentage || ""}
-                        onChange={(e) => handlePercentageChange(e.target.value)}
-                        className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs font-bold text-slate-900"
                       />
                     </div>
                     <div>
@@ -2308,8 +2805,9 @@ export default function InventarioTab() {
                       <input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={newProdPrice || ""}
-                        onChange={(e) => handlePriceChange(Number(e.target.value))}
+                        onChange={(e) => setNewProdPrice(Number(e.target.value))}
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-teal-700"
                       />
                     </div>
@@ -2318,6 +2816,7 @@ export default function InventarioTab() {
                       <input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={newProdSkins || ""}
                         onChange={(e) => setNewProdSkins(Number(e.target.value))}
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
@@ -2333,20 +2832,10 @@ export default function InventarioTab() {
                       <input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={newProdCost || ""}
-                        onChange={(e) => handleCostChange(Number(e.target.value))}
+                        onChange={(e) => setNewProdCost(Number(e.target.value))}
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">% Ganancia</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Ej: 30"
-                        value={profitPercentage || ""}
-                        onChange={(e) => handlePercentageChange(e.target.value)}
-                        className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs font-bold text-slate-900"
                       />
                     </div>
                     <div>
@@ -2354,8 +2843,9 @@ export default function InventarioTab() {
                       <input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={newProdPrice || ""}
-                        onChange={(e) => handlePriceChange(Number(e.target.value))}
+                        onChange={(e) => setNewProdPrice(Number(e.target.value))}
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-teal-700"
                       />
                     </div>
@@ -2364,6 +2854,7 @@ export default function InventarioTab() {
                       <input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={newProdSkins || ""}
                         onChange={(e) => setNewProdSkins(Number(e.target.value))}
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
@@ -2379,20 +2870,10 @@ export default function InventarioTab() {
                       <input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={newProdCost || ""}
-                        onChange={(e) => handleCostChange(Number(e.target.value))}
+                        onChange={(e) => setNewProdCost(Number(e.target.value))}
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-teal-650 uppercase tracking-wider mb-1">% Ganancia</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Ej: 30"
-                        value={profitPercentage || ""}
-                        onChange={(e) => handlePercentageChange(e.target.value)}
-                        className="w-full px-3 py-1.5 border border-teal-150 bg-teal-50/10 rounded-md text-xs font-bold text-slate-900"
                       />
                     </div>
                     <div>
@@ -2400,8 +2881,9 @@ export default function InventarioTab() {
                       <input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={newProdPrice || ""}
-                        onChange={(e) => handlePriceChange(Number(e.target.value))}
+                        onChange={(e) => setNewProdPrice(Number(e.target.value))}
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-teal-700"
                       />
                     </div>
@@ -2412,7 +2894,7 @@ export default function InventarioTab() {
                         min="0"
                         value={newProdPriceUnits || ""}
                         onChange={(e) => setNewProdPriceUnits(Number(e.target.value))}
-                        placeholder="Ej: 500"
+                        placeholder="0"
                         className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-teal-700"
                       />
                     </div>
@@ -2428,7 +2910,7 @@ export default function InventarioTab() {
                           const total = newProdSkins * newFactor;
                           setNewProdUnits(total);
                         }}
-                        placeholder="Ej: 10 pastillas"
+                        placeholder="Ej: 10"
                         className="w-full px-3 py-1.5 border border-teal-200 bg-teal-50/20 rounded-md text-xs font-bold text-slate-900"
                       />
                     </div>
@@ -2437,6 +2919,7 @@ export default function InventarioTab() {
                       <input
                         type="number"
                         min="0"
+                        placeholder="0"
                         value={newProdSkins || ""}
                         onChange={(e) => {
                           const newSkins = Math.max(0, Number(e.target.value));
@@ -2455,6 +2938,7 @@ export default function InventarioTab() {
                         <input
                           type="number"
                           min="0"
+                          placeholder="0"
                           value={newProdUnits || ""}
                           onChange={(e) => {
                             const newUnits = Math.max(0, Number(e.target.value));
@@ -2474,34 +2958,50 @@ export default function InventarioTab() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Tarjeta de Ganancia Automática */}
+              {Number(newProdCost) > 0 && Number(newProdPrice) > 0 && (
+                <div className="bg-teal-50 border border-teal-200/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
+                      %
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Margen Automático:</span>
+                      <span className="text-sm font-extrabold text-teal-800">
+                        +{Math.round(((Number(newProdPrice) - Number(newProdCost)) / Number(newProdCost)) * 100)}% de ganancia
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Ganancia Bruta:</span>
+                    <span className="text-xs font-black text-teal-900">
+                      +${(Number(newProdPrice) - Number(newProdCost)).toLocaleString("es-CO")} {newProdSellMode === "unidad" ? "x unidad" : "x caja/sobre"}
+                    </span>
+                  </div>
+                  {newProdSellMode === "ambas" && Number(newProdFactor) > 1 && Number(newProdPriceUnits) > 0 && (
+                    <div className="w-full pt-2 mt-1 border-t border-teal-200/60 flex items-center justify-between text-xs">
+                      <span className="text-teal-800 font-semibold text-[11px]">
+                        Pastilla / Fracción suelta (${Number(newProdPriceUnits).toLocaleString("es-CO")}):
+                      </span>
+                      <span className="font-bold text-emerald-800">
+                        +{Math.round(((Number(newProdPriceUnits) - (Number(newProdCost) / Number(newProdFactor))) / (Number(newProdCost) / Number(newProdFactor))) * 100)}% (+${Math.round(Number(newProdPriceUnits) - (Number(newProdCost) / Number(newProdFactor))).toLocaleString("es-CO")}/u)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Stock Mínimo Alerta</label>
                   <input
                     type="number"
-                    value={newProdMinAlert || ""}
-                    onChange={(e) => setNewProdMinAlert(Number(e.target.value))}
+                    min="0"
+                    placeholder="0"
+                    value={newProdMinAlert !== undefined && newProdMinAlert !== null && newProdMinAlert !== 0 ? newProdMinAlert : (newProdMinAlert === 0 ? "0" : "")}
+                    onChange={(e) => setNewProdMinAlert(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                     className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Código de Barras</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Escanear o digitar..."
-                      value={newProdBarcode || ""}
-                      onChange={(e) => setNewProdBarcode(e.target.value)}
-                      className="flex-1 px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-bold text-slate-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowBarcodeScannerForNewProduct(true)}
-                      className="px-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-250 rounded-md text-xs font-bold flex items-center justify-center cursor-pointer"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-slate-600" />
-                    </button>
-                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">URL Foto (Opcional)</label>
@@ -2515,6 +3015,88 @@ export default function InventarioTab() {
                 </div>
               </div>
 
+              {/* 3 Códigos de Barras en Modal de Creación */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div className="mb-2">
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Códigos de Barras (Hasta 3)
+                  </label>
+                  <span className="text-[11px] text-slate-500">
+                    Búsqueda y lectura láser habilitada para cualquiera de los códigos.
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Código 1 (Principal)</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScannerTarget("new1");
+                          setShowBarcodeScannerModal(true);
+                        }}
+                        className="text-teal-600 hover:text-teal-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Camera className="w-3 h-3" /> Escanear
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Ej: 7702008123456"
+                      value={newProdBarcode || ""}
+                      onChange={(e) => setNewProdBarcode(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-teal-600"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Código 2 (Opcional)</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScannerTarget("new2");
+                          setShowBarcodeScannerModal(true);
+                        }}
+                        className="text-teal-600 hover:text-teal-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Camera className="w-3 h-3" /> Escanear
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Segundo código..."
+                      value={newProdBarcode2 || ""}
+                      onChange={(e) => setNewProdBarcode2 && setNewProdBarcode2(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-teal-600"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Código 3 (Opcional)</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScannerTarget("new3");
+                          setShowBarcodeScannerModal(true);
+                        }}
+                        className="text-teal-600 hover:text-teal-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Camera className="w-3 h-3" /> Escanear
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Tercer código..."
+                      value={newProdBarcode3 || ""}
+                      onChange={(e) => setNewProdBarcode3 && setNewProdBarcode3(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-slate-250 bg-white rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-teal-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-150">
                 <button
                   type="button"
@@ -2525,9 +3107,16 @@ export default function InventarioTab() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                 >
-                  Registrar Producto
+                  {inventoryFormMode === "invoice" ? (
+                    <>
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Adicionar a la Factura</span>
+                    </>
+                  ) : (
+                    <span>Registrar Producto</span>
+                  )}
                 </button>
               </div>
             </form>

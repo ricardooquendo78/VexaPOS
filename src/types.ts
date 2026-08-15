@@ -36,7 +36,8 @@ export interface Product {
   conversionFactor: number; // How many units/tablets make up exactly 1 Box/Sobre (e.g. 10 or 12 or 24)
   
   minStockAlert: number; // Alert threshold in units equivalent
-  barcode?: string;
+  barcode?: string; // Primary barcode
+  barcodes?: string[]; // Up to 3 barcodes
   fotoUrl?: string;
   isActive: boolean;
 }

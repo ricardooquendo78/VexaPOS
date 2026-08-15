@@ -1,6 +1,7 @@
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 import dns from "dns";
+import crypto from "crypto";
 
 try {
   dns.setServers(["8.8.8.8", "1.1.1.1"]);
@@ -9,6 +10,13 @@ try {
 }
 
 dotenv.config();
+
+function hashPassword(password) {
+  if (!password) return "";
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `s2:${salt}:${hash}`;
+}
 
 const uri = process.env.MONGODB_URI;
 if (!uri) {
@@ -41,7 +49,7 @@ async function run() {
       id: "1",
       name: "Administrador Vexa POS",
       email: "drogueriagratamira@gmail.com",
-      password: "43518612",
+      password: hashPassword("43518612"),
       role: "admin",
       profileImage: ""
     });

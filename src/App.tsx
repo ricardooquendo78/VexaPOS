@@ -132,17 +132,19 @@ export default function App() {
   const [newProdName, setNewProdName] = useState("");
   const [newProdExp, setNewProdExp] = useState("");
   const [newProdLab, setNewProdLab] = useState("");
-  const [newProdCost, setNewProdCost] = useState(0);
-  const [newProdPrice, setNewProdPrice] = useState(0);
+  const [newProdCost, setNewProdCost] = useState<number>(0);
+  const [newProdPrice, setNewProdPrice] = useState<number>(0);
   const [newProdCategory, setNewProdCategory] = useState("");
-  const [newProdSkins, setNewProdSkins] = useState(0); 
-  const [newProdUnits, setNewProdUnits] = useState(0); 
-  const [newProdFactor, setNewProdFactor] = useState(10); // columns or pills in custom layout
-  const [newProdMinAlert, setNewProdMinAlert] = useState(5);
-  const [newProdBarcode, setNewProdBarcode] = useState("");
+  const [newProdSkins, setNewProdSkins] = useState<number>(0); 
+  const [newProdUnits, setNewProdUnits] = useState<number>(0); 
+  const [newProdFactor, setNewProdFactor] = useState<number>(10); // columns or pills in custom layout
+  const [newProdMinAlert, setNewProdMinAlert] = useState<number>(0);
+  const [newProdBarcode, setNewProdBarcode] = useState<string>('');
+  const [newProdBarcode2, setNewProdBarcode2] = useState("");
+  const [newProdBarcode3, setNewProdBarcode3] = useState("");
   const [newProdFoto, setNewProdFoto] = useState("");
   const [newProdSellMode, setNewProdSellMode] = useState<"unidad" | "sobres" | "ambas">("ambas");
-  const [newProdPriceUnits, setNewProdPriceUnits] = useState(0);
+  const [newProdPriceUnits, setNewProdPriceUnits] = useState<number>(0);
 
   // Printing state
   const [activePrintInvoice, setActivePrintInvoice] = useState<any>(null);
@@ -174,6 +176,7 @@ export default function App() {
     productId: string;
     productName: string;
     laboratory: string;
+    category?: string;
     conversionFactor: number;
     quantitySkins: number;
     quantityUnits: number;
@@ -182,6 +185,11 @@ export default function App() {
     price: number;
     priceUnits?: number;
     expirationDate: string;
+    minStockAlert?: number;
+    barcode?: string;
+    barcodes?: string[];
+    fotoUrl?: string;
+    isNewProduct?: boolean;
   }[]>([]);
 
   // POS (Facturación) cart state
@@ -278,23 +286,37 @@ export default function App() {
       const response = await fetch("/api/inventory");
       if (response.ok) {
         const prodData = await response.json();
-        setProducts(prodData);
+        const sorted = (Array.isArray(prodData) ? prodData : []).sort((a: any, b: any) =>
+          (a.name || "").localeCompare(b.name || "", "es", { sensitivity: "base" })
+        );
+        setProducts(sorted);
       }
       
       const supResp = await fetch("/api/inventory/manage/suppliers");
       if (supResp.ok) {
         const supData = await supResp.json();
-        setSuppliers(supData);
+        const sortedSup = (Array.isArray(supData) ? supData : []).sort((a: any, b: any) =>
+          (a.name || "").localeCompare(b.name || "", "es", { sensitivity: "base" })
+        );
+        setSuppliers(sortedSup);
       }
 
       const labsResp = await fetch("/api/inventory/manage/laboratories");
       if (labsResp.ok) {
-        setLaboratories(await labsResp.json());
+        const labsData = await labsResp.json();
+        const sortedLabs = (Array.isArray(labsData) ? labsData : []).sort((a: string, b: string) =>
+          (a || "").localeCompare(b || "", "es", { sensitivity: "base" })
+        );
+        setLaboratories(sortedLabs);
       }
 
       const catsResp = await fetch("/api/inventory/manage/categories");
       if (catsResp.ok) {
-        setCategories(await catsResp.json());
+        const catsData = await catsResp.json();
+        const sortedCats = (Array.isArray(catsData) ? catsData : []).sort((a: string, b: string) =>
+          (a || "").localeCompare(b || "", "es", { sensitivity: "base" })
+        );
+        setCategories(sortedCats);
       }
 
       const salesResp = await fetch("/api/sales");
@@ -402,36 +424,7 @@ export default function App() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthError("");
-    setAuthSuccess("");
-    if (!registerName || !registerEmail || !registerPassword) {
-      setAuthError("Favor diligenciar todos los campos");
-      return;
-    }
-    
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: registerName,
-          email: registerEmail,
-          password: registerPassword,
-          role: registerRole
-        })
-      });
-      const data = await response.json();
-      if (data.success) {
-        setAuthSuccess("¡Registro exitoso! Ya puedes iniciar sesión.");
-        setAuthMode("login");
-        setLoginEmail(registerEmail);
-        setLoginPassword("");
-      } else {
-        setAuthError(data.message || "Error al registrar el usuario.");
-      }
-    } catch (err) {
-      setAuthError("Error: El servidor no está disponible y el registro offline no está soportado");
-    }
+    setAuthError("El registro público está deshabilitado. Ingrese con una cuenta existente.");
   };
 
   const handleLogout = () => {
@@ -466,6 +459,11 @@ export default function App() {
       savedUnits = (Number(newProdUnits) || 0) % savedFactor;
     }
 
+    const barcodesList = [newProdBarcode, newProdBarcode2, newProdBarcode3]
+      .map(b => (b || "").trim())
+      .filter(Boolean)
+      .slice(0, 3);
+
     const payload = {
       id: "prod-local-" + Date.now(),
       name: newProdName,
@@ -478,8 +476,9 @@ export default function App() {
       quantityOnSkins: savedSkins,
       quantityUnits: savedUnits,
       conversionFactor: savedFactor,
-      minStockAlert: Number(newProdMinAlert) || 5,
-      barcode: newProdBarcode,
+      minStockAlert: (newProdMinAlert !== undefined && newProdMinAlert !== null && newProdMinAlert !== "" && !isNaN(Number(newProdMinAlert))) ? Math.max(0, Number(newProdMinAlert)) : 0,
+      barcode: barcodesList[0] || "",
+      barcodes: barcodesList,
       fotoUrl: newProdFoto || "",
       isActive: true
     };
@@ -530,8 +529,10 @@ export default function App() {
     setNewProdSkins(0);
     setNewProdUnits(0);
     setNewProdFactor(10);
-    setNewProdMinAlert(5);
+    setNewProdMinAlert(0);
     setNewProdBarcode("");
+    setNewProdBarcode2("");
+    setNewProdBarcode3("");
     setNewProdFoto("");
     setNewProdSellMode("ambas");
     // Scroll smoothly to top of the page to register another product immediately
@@ -685,39 +686,71 @@ export default function App() {
       supplierId: restockSupplierId,
       items: invoiceItems.map(item => ({
         productId: item.productId,
+        isNewProduct: !!item.isNewProduct,
+        name: item.productName,
+        laboratory: item.laboratory,
+        category: item.category || "General",
+        conversionFactor: item.conversionFactor || 1,
         quantitySkins: item.quantitySkins,
         quantityUnits: item.quantityUnits,
         cost: item.cost,
         price: item.price,
         priceUnits: item.priceUnits,
-        expirationDate: item.expirationDate
+        expirationDate: item.expirationDate,
+        minStockAlert: (item.minStockAlert !== undefined && item.minStockAlert !== null && item.minStockAlert !== "" && !isNaN(Number(item.minStockAlert))) ? Math.max(0, Number(item.minStockAlert)) : 0,
+        barcode: item.barcode || (item.barcodes && item.barcodes[0]) || "",
+        barcodes: item.barcodes || (item.barcode ? [item.barcode] : []),
+        fotoUrl: item.fotoUrl || ""
       }))
     };
 
     if (isOffline) {
       // Local addition
       setProducts(prev => {
-        return prev.map(p => {
-          const item = invoiceItems.find(it => it.productId === p.id);
-          if (item) {
-            let newS = p.quantityOnSkins + item.quantitySkins;
-            let newU = p.quantityUnits + item.quantityUnits;
-            if (newU >= p.conversionFactor && p.conversionFactor > 1) {
-              newS += Math.floor(newU / p.conversionFactor);
-              newU = newU % p.conversionFactor;
+        const nextList = [...prev];
+        for (const item of invoiceItems) {
+          if (item.isNewProduct) {
+            nextList.push({
+              id: item.productId,
+              name: item.productName,
+              laboratory: item.laboratory,
+              category: item.category || "General",
+              conversionFactor: item.conversionFactor || 1,
+              quantityOnSkins: item.quantitySkins,
+              quantityUnits: item.quantityUnits,
+              cost: item.cost,
+              price: item.price,
+              priceUnits: item.priceUnits,
+              expirationDate: item.expirationDate,
+              minStockAlert: (item.minStockAlert !== undefined && item.minStockAlert !== null && item.minStockAlert !== "" && !isNaN(Number(item.minStockAlert))) ? Math.max(0, Number(item.minStockAlert)) : 0,
+              barcode: item.barcode || (item.barcodes && item.barcodes[0]) || "",
+              barcodes: item.barcodes || (item.barcode ? [item.barcode] : []),
+              fotoUrl: item.fotoUrl || "",
+              isActive: true
+            });
+          } else {
+            const idx = nextList.findIndex(p => p.id === item.productId);
+            if (idx !== -1) {
+              const p = nextList[idx];
+              let newS = p.quantityOnSkins + item.quantitySkins;
+              let newU = p.quantityUnits + item.quantityUnits;
+              if (newU >= p.conversionFactor && p.conversionFactor > 1) {
+                newS += Math.floor(newU / p.conversionFactor);
+                newU = newU % p.conversionFactor;
+              }
+              nextList[idx] = {
+                ...p,
+                quantityOnSkins: newS,
+                quantityUnits: newU,
+                cost: item.cost > 0 ? item.cost : p.cost,
+                price: item.price > 0 ? item.price : p.price,
+                priceUnits: item.priceUnits !== undefined && item.priceUnits > 0 ? item.priceUnits : p.priceUnits,
+                expirationDate: item.expirationDate ? item.expirationDate : p.expirationDate
+              };
             }
-            return {
-              ...p,
-              quantityOnSkins: newS,
-              quantityUnits: newU,
-              cost: item.cost > 0 ? item.cost : p.cost,
-              price: item.price > 0 ? item.price : p.price,
-              priceUnits: item.priceUnits !== undefined && item.priceUnits > 0 ? item.priceUnits : p.priceUnits,
-              expirationDate: item.expirationDate ? item.expirationDate : p.expirationDate
-            };
           }
-          return p;
-        });
+        }
+        return nextList;
       });
 
       // Add bulk restock log to offline queue
@@ -845,6 +878,49 @@ export default function App() {
     }
   };
 
+  const handleDeleteProduct = async (id: string) => {
+    const p = products.find(prod => prod.id === id);
+    const prodName = p ? p.name : "Producto";
+
+    if (isOffline) {
+      setProducts(prev => prev.filter(prod => prod.id !== id));
+      setOfflineQueue(prev => [...prev, {
+        id: "action-delete-" + Date.now(),
+        type: "DELETE",
+        entity: "product_delete",
+        data: { id },
+        timestamp: new Date().toISOString()
+      }]);
+      setSyncLogs(prev => [`[Offline] Producto eliminado localmente: "${prodName}"`, ...prev]);
+    } else {
+      try {
+        const response = await fetch("/api/inventory/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id })
+        });
+        if (response.ok) {
+          setSyncLogs(prev => [`[Servidor] Producto eliminado en la nube: "${prodName}"`, ...prev]);
+          setProducts(prev => prev.filter(prod => prod.id !== id));
+          fetchInitialData();
+        } else {
+          const errData = await response.json();
+          alert(errData.message || "Error al eliminar producto.");
+        }
+      } catch (err) {
+        alert("Error de conexión al eliminar. Se aplicó en cola local.");
+        setProducts(prev => prev.filter(prod => prod.id !== id));
+        setOfflineQueue(prev => [...prev, {
+          id: "action-delete-" + Date.now(),
+          type: "DELETE",
+          entity: "product_delete",
+          data: { id },
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    }
+  };
+
   // POS / Facturación Helpers
   const handleAddProductToCart = (p: Product) => {
     const existing = posCart.find(item => item.product.id === p.id);
@@ -871,7 +947,12 @@ export default function App() {
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcodeInput) return;
-    const match = products.find(p => p.barcode === barcodeInput || p.id === barcodeInput);
+    const clean = barcodeInput.trim().toLowerCase();
+    const match = products.find(p =>
+      p.id.toLowerCase() === clean ||
+      (p.barcode && p.barcode.toLowerCase() === clean) ||
+      (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.some(b => b && b.toLowerCase() === clean))
+    );
     if (match) {
       handleAddProductToCart(match);
       setBarcodeInput("");
@@ -900,204 +981,171 @@ export default function App() {
     setPosCart(prev => prev.filter(c => c.product.id !== prodId));
   };
 
-  // Calculate POS cart values
+  // Pricing calculations
   const calculateCartTotals = () => {
     let subtotal = 0;
     posCart.forEach(item => {
-      const skinCost = item.qtySkins * item.customPrice;
-      let unitPrice = 0;
-      if (item.product.conversionFactor > 1) {
-        if (item.product.priceUnits && item.product.priceUnits > 0) {
-          const baseEnvelopePrice = item.product.price || 0;
-          if (baseEnvelopePrice > 0 && item.customPrice !== baseEnvelopePrice) {
-            const ratio = item.customPrice / baseEnvelopePrice;
-            unitPrice = Math.round(item.product.priceUnits * ratio);
-          } else {
-            unitPrice = item.product.priceUnits;
-          }
-        } else {
-          unitPrice = item.customPrice / item.product.conversionFactor;
-        }
-      } else {
-        unitPrice = item.customPrice;
-      }
-      const unitCost = item.qtyUnits * unitPrice;
-      subtotal += (skinCost + unitCost);
+      const skins = item.qtySkins || 0;
+      const units = item.qtyUnits || 0;
+      const pricePerSkin = item.customPrice !== undefined ? item.customPrice : item.product.price;
+      const factor = item.product.conversionFactor || 1;
+      
+      const pricePerUnit = item.product.priceUnits && item.product.priceUnits > 0 
+        ? item.product.priceUnits 
+        : (factor > 1 ? (pricePerSkin / factor) : pricePerSkin);
+
+      subtotal += (skins * pricePerSkin) + (units * pricePerUnit);
     });
-    return Math.round(subtotal);
+    return {
+      subtotal: Math.round(subtotal),
+      tax: 0,
+      total: Math.round(subtotal)
+    };
   };
 
-  // Process POS Sale
-  const handleCheckoutSale = async () => {
+  // POS Checkout (Create Sale)
+  const handleCheckoutSale = async (paymentMethod: "Efectivo" | "Tarjeta" | "Transferencia", clientNit?: string) => {
     if (posCart.length === 0) {
-      alert("El carrito está vacío");
+      alert("El carrito de compras está vacío.");
       return;
     }
 
-    const nextInvoiceNo = "FC-" + String(sales.length + 1).padStart(5, "0");
-    const total = calculateCartTotals();
-    
-    const itemsPayload = posCart.map(c => {
-      let unitPrice = 0;
-      if (c.product.conversionFactor > 1) {
-        if (c.product.priceUnits && c.product.priceUnits > 0) {
-          const baseEnvelopePrice = c.product.price || 0;
-          if (baseEnvelopePrice > 0 && c.customPrice !== baseEnvelopePrice) {
-            const ratio = c.customPrice / baseEnvelopePrice;
-            unitPrice = Math.round(c.product.priceUnits * ratio);
-          } else {
-            unitPrice = c.product.priceUnits;
-          }
-        } else {
-          unitPrice = c.customPrice / c.product.conversionFactor;
-        }
-      } else {
-        unitPrice = c.customPrice;
-      }
-      const amount = (c.qtySkins * c.customPrice) + (c.qtyUnits * unitPrice);
+    const { total } = calculateCartTotals();
+    const invoiceNum = "FAC-" + Date.now().toString().slice(-6);
 
-      return {
-        productId: c.product.id,
-        productName: c.product.name,
-        quantitySkins: c.qtySkins,
-        quantityUnits: c.qtyUnits,
-        price: c.customPrice,
-        subtotal: Math.round(amount)
-      };
-    });
-
-    const payload = {
-      id: "sale-local-" + Date.now(),
-      invoiceNumber: nextInvoiceNo,
-      sellerId: currentUser?.id || "offline-pos",
-      sellerName: currentUser?.name || "Vendedor Local",
-      items: itemsPayload,
-      total,
-      clientNit: invoiceClientNit || ""
-    };
-
-    // Stock reduction math inside UI to simulate offline-first precision
-    const updatedProducts = products.map(p => {
-      const cartItem = posCart.find(c => c.product.id === p.id);
-      if (cartItem) {
-        const totalUnitsInStock = (p.quantityOnSkins * p.conversionFactor) + p.quantityUnits;
-        const totalUnitsToDeduct = (cartItem.qtySkins * p.conversionFactor) + cartItem.qtyUnits;
-        const remainingTotalUnits = Math.max(0, totalUnitsInStock - totalUnitsToDeduct);
-        
-        let remSkins = 0;
-        let remUnits = 0;
-
-        if (p.conversionFactor > 1) {
-          remSkins = Math.floor(remainingTotalUnits / p.conversionFactor);
-          remUnits = remainingTotalUnits % p.conversionFactor;
-        } else {
-          remSkins = remainingTotalUnits;
-          remUnits = 0;
-        }
+    const salePayload = {
+      id: "sale-" + Date.now(),
+      invoiceNumber: invoiceNum,
+      timestamp: new Date().toISOString(),
+      items: posCart.map(c => {
+        const factor = c.product.conversionFactor || 1;
+        const pricePerSkin = c.customPrice !== undefined ? c.customPrice : c.product.price;
+        const pricePerUnit = c.product.priceUnits && c.product.priceUnits > 0 
+          ? c.product.priceUnits 
+          : (factor > 1 ? (pricePerSkin / factor) : pricePerSkin);
+        const itemSubtotal = (c.qtySkins * pricePerSkin) + (c.qtyUnits * pricePerUnit);
 
         return {
-          ...p,
-          quantityOnSkins: remSkins,
-          quantityUnits: remUnits
+          productId: c.product.id,
+          productName: c.product.name,
+          qtySkins: c.qtySkins,
+          qtyUnits: c.qtyUnits,
+          priceSkins: pricePerSkin,
+          priceUnits: pricePerUnit,
+          subtotal: Math.round(itemSubtotal)
         };
-      }
-      return p;
-    });
-
-    setProducts(updatedProducts);
-
-    // Closure updates
-    setActiveClosure(prev => ({
-      ...prev,
-      totalSalesCount: prev.totalSalesCount + 1,
-      totalSalesRevenue: prev.totalSalesRevenue + total,
-      finalCash: prev.finalCash + total
-    }));
+      }),
+      totalAmount: total,
+      paymentMethod,
+      clientNit: clientNit || undefined,
+      sellerName: currentUser?.name || "Vendedor Gratamira"
+    };
 
     if (isOffline) {
-      setSales(prev => [payload as any, ...prev]);
+      // Local stock deduction
+      setProducts(prev => prev.map(p => {
+        const inCart = posCart.find(c => c.product.id === p.id);
+        if (inCart) {
+          const factor = p.conversionFactor || 1;
+          const currentTotalUnits = (p.quantityOnSkins * factor) + p.quantityUnits;
+          const soldUnits = (inCart.qtySkins * factor) + inCart.qtyUnits;
+          const remainingUnits = Math.max(0, currentTotalUnits - soldUnits);
+          
+          return {
+            ...p,
+            quantityOnSkins: Math.floor(remainingUnits / factor),
+            quantityUnits: remainingUnits % factor
+          };
+        }
+        return p;
+      }));
+
+      setSales(prev => [salePayload, ...prev]);
       setOfflineQueue(prev => [...prev, {
-        id: "action-" + Date.now(),
+        id: "action-sale-" + Date.now(),
         type: "CREATE",
         entity: "sale",
-        data: payload,
+        data: salePayload,
         timestamp: new Date().toISOString()
       }]);
-      setSyncLogs(prev => [`[Offline POS] Factura ${nextInvoiceNo} por $${total} creada localmente.`, ...prev]);
+      setSyncLogs(prev => [`[Offline] Venta registrada ${invoiceNum} por $${total.toLocaleString("es-CO")}`, ...prev]);
     } else {
       try {
         const response = await fetch("/api/sales", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(salePayload)
         });
         if (response.ok) {
-          setSyncLogs(prev => [`[Servidor] Factura de Venta ${nextInvoiceNo} sincronizada. Balances actualizados.`, ...prev]);
+          setSyncLogs(prev => [`[Servidor] Venta sincronizada exitosa ${invoiceNum}`, ...prev]);
           fetchInitialData();
         }
       } catch (err) {
-        setSales(prev => [payload as any, ...prev]);
+        alert("Fallo de conexión. La venta se registrará de forma local.");
+        setSales(prev => [salePayload, ...prev]);
         setOfflineQueue(prev => [...prev, {
-          id: "action-" + Date.now(),
+          id: "action-sale-" + Date.now(),
           type: "CREATE",
           entity: "sale",
-          data: payload,
+          data: salePayload,
           timestamp: new Date().toISOString()
         }]);
       }
     }
 
-    // Disparar impresión
-    setActivePrintInvoice(payload);
-
+    setActivePrintInvoice(salePayload);
     setPosCart([]);
     setInvoiceClientNit("");
     setShowInvoicePreview(false);
-    alert(`Venta registrada con éxito. Factura: ${nextInvoiceNo}`);
+    setTimeout(() => {
+      window.print();
+    }, 400);
   };
 
-  // Cierre Daily Expense submission
+  // Add Expense
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!expenseDesc || expenseAmount <= 0) return;
+    if (!expenseDesc || expenseAmount <= 0) {
+      alert("Ingrese una descripción y un valor válido.");
+      return;
+    }
 
     const payload = {
+      id: "exp-" + Date.now(),
       description: expenseDesc,
-      amount: expenseAmount
+      amount: Number(expenseAmount),
+      date: new Date().toISOString(),
+      category: "Caja Menor"
     };
 
-    setActiveClosure(prev => {
-      const expObj = { id: "exp-" + Date.now(), description: expenseDesc, amount: expenseAmount, timestamp: new Date().toISOString() };
-      return {
-        ...prev,
-        totalExpenses: prev.totalExpenses + expenseAmount,
-        finalCash: prev.finalCash - expenseAmount,
-        expenses: [...prev.expenses, expObj]
-      };
-    });
-
     if (isOffline) {
+      if (activeClosure) {
+        setActiveClosure({
+          ...activeClosure,
+          expenses: [...activeClosure.expenses, payload]
+        });
+      }
       setOfflineQueue(prev => [...prev, {
-        id: "action-" + Date.now(),
+        id: "action-exp-" + Date.now(),
         type: "CREATE",
         entity: "expense",
         data: payload,
         timestamp: new Date().toISOString()
       }]);
-      setSyncLogs(prev => [`[Offline Cierre] Gasto registrado: "${expenseDesc}" por $${expenseAmount}`, ...prev]);
+      setSyncLogs(prev => [`[Offline] Gasto registrado: ${payload.description}`, ...prev]);
     } else {
       try {
-        const response = await fetch("/api/closure/expense", {
+        const response = await fetch("/api/closures/expense", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
         if (response.ok) {
-          setSyncLogs(prev => [`Gasto registrado de forma segura en la base de datos nubes: "${expenseDesc}"`, ...prev]);
           fetchInitialData();
+          setSyncLogs(prev => [`[Servidor] Gasto registrado: ${payload.description}`, ...prev]);
         }
       } catch (err) {
-        alert("Sin conexión. El gasto se acumuló en cola de sincronización.");
+        alert("Error de conexión al registrar gasto.");
       }
     }
 
@@ -1105,110 +1153,101 @@ export default function App() {
     setExpenseAmount(0);
   };
 
-  // Complete Shift / Cierre de Caja (No-op as it is now processed automatically on day end)
-  const handleFinalizeClosure = async () => {};
+  // Finalize Daily Closure
+  const handleFinalizeClosure = async () => {
+    if (!activeClosure) return;
+    if (!confirm("¿Está seguro de realizar el cierre definitivo de caja del día?")) return;
 
-  // Profile management trigger updates
+    if (isOffline) {
+      alert("El cierre formal requiere conexión al servidor principal.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/closures/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ closureId: activeClosure.id })
+      });
+      if (response.ok) {
+        alert("Cierre de caja completado exitosamente.");
+        fetchInitialData();
+      }
+    } catch (err) {
+      alert("Error al finalizar el cierre.");
+    }
+  };
+
+  // Profile updates
   const handleUpdateBusinessProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const resp = await fetch("/api/profile/business", {
+      const response = await fetch("/api/profile/business", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(business)
       });
-      if (resp.ok) {
-        alert("¡Datos del negocio e información corporativa POS actualizados!");
-        fetchInitialData();
-      } else {
-        const errorData = await resp.json().catch(() => ({}));
-        alert("Error al guardar la configuración: " + (errorData.message || "Error interno del servidor"));
+      if (response.ok) {
+        alert("Datos del negocio actualizados correctamente.");
       }
-    } catch (e) {
-      alert("Actualización guardada de forma local");
+    } catch (err) {
+      alert("Error actualizando perfil del negocio.");
     }
   };
 
   const handleUpdatePersonalProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentUser) {
-      try {
-        const resp = await fetch("/api/profile/personal", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: currentUser.id,
-            name: profileName,
-            profileImage: profileImage
-          })
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          setCurrentUser({
-            ...currentUser,
-            name: data.name,
-            profileImage: data.profileImage
-          });
-          alert("¡Perfil personal actualizado!");
-        } else {
-          const errorData = await resp.json().catch(() => ({}));
-          alert("Error al actualizar el perfil: " + (errorData.message || "Error del servidor"));
-        }
-      } catch (err) {
-        // Offline fallback
-        setCurrentUser({
-          ...currentUser,
+    if (!currentUser) return;
+    try {
+      const response = await fetch("/api/profile/personal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: currentUser.id,
           name: profileName,
-          profileImage: profileImage
-        });
-        alert("Perfil personal actualizado localmente (Modo Offline).");
+          image: profileImage
+        })
+      });
+      if (response.ok) {
+        setCurrentUser({ ...currentUser, name: profileName, image: profileImage });
+        alert("Perfil de usuario actualizado.");
       }
+    } catch (err) {
+      alert("Error actualizando perfil personal.");
     }
   };
 
-  // Report Export: Generates Excel-compatible CSV downloads
-  const handleDownloadXLS = (reportType: string) => {
-    let csvContent = "sep=,\n"; // Instrucción explícita para que Excel divida por comas independientemente de la región
-    
-    if (reportType === "inventario") {
-      csvContent += "ID,Nombre,Categoría,Laboratorio,Sobres o Cajas,Pastillas Sueltas,Costo Caja,Precio Venta,Fecha de Vencimiento,Código de Barras\n";
-      products.forEach(p => {
-        csvContent += `"${p.id}","${p.name}","${p.category}","${p.laboratory}",${p.quantityOnSkins},${p.quantityUnits},${p.cost},${p.price},"${p.expirationDate}","${p.barcode || ""}"\n`;
-      });
-    } else if (reportType === "sales") {
-      csvContent += "Número Factura,Fecha,Vendedor,NIT Cliente,Total\n";
-      sales.forEach(s => {
-        csvContent += `"${s.invoiceNumber}","${s.dateTime || new Date().toLocaleDateString()}","${s.sellerName}","${s.clientNit || ""}",${s.total}\n`;
-      });
-    } else {
-      csvContent += "Fecha Cierre,Ingresos por Ventas,Gastos Registrados,Fondo Inicial,Dinero en Caja Neto,Estado\n";
-      closures.forEach(cl => {
-        csvContent += `"${cl.date}",${cl.totalSalesRevenue},${cl.totalExpenses},${cl.initialCash},${cl.finalCash},"${cl.isClosed ? 'Cerrado' : 'Abierto'}"\n`;
-      });
-    }
-
-    // Agregar BOM de UTF-8 (\uFEFF) para que Excel reconozca tildes y eñes correctamente
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    
+  // Excel / CSV Export
+  const handleDownloadXLS = () => {
+    let csvContent = "data:text/csv;charset=utf-8,ID,Nombre,Categoria,Laboratorio,Sobres/Cajas,Unidades Sueltas,Costo,Precio,Vencimiento,Codigo de Barras\n";
+    products.forEach(p => {
+      const bCodes = (p.barcodes && p.barcodes.length > 0) ? p.barcodes.join(" / ") : (p.barcode || "");
+      csvContent += `"${p.id}","${p.name}","${p.category}","${p.laboratory}",${p.quantityOnSkins},${p.quantityUnits},${p.cost},${p.price},"${p.expirationDate}","${bCodes}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    // Reemplazar diagonales de fecha para evitar nombres de archivo inválidos
-    const dateStr = new Date().toLocaleDateString('es-CO').replace(/\//g, "-");
-    link.setAttribute("download", `Reporte_VexaPOS_${reportType}_${dateStr}.csv`);
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `inventario_vexapos_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(encodedUri);
   };
 
   // Computes stock warnings and statistics
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(prodSearchQuery.toLowerCase()) || 
-                          (p.barcode && p.barcode.includes(prodSearchQuery));
-    const matchesCategory = prodCategoryFilter ? p.category === prodCategoryFilter : true;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredProducts = products
+    .filter(p => {
+      const q = prodSearchQuery.toLowerCase().trim();
+      const matchesSearch = !q ||
+        p.name.toLowerCase().includes(q) ||
+        (p.laboratory && p.laboratory.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+        (p.barcodes && Array.isArray(p.barcodes) && p.barcodes.some(b => b && b.toLowerCase().includes(q)));
+      const matchesCategory = prodCategoryFilter ? p.category === prodCategoryFilter : true;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es", { sensitivity: "base" }));
 
   const totalInventoryCost = products.reduce((acc, p) => {
     // cost is per envelope / box. We estimate loose unit cost relative to conversion factor
@@ -1233,7 +1272,7 @@ export default function App() {
   const restockProductFactor = restockSelectedProduct?.conversionFactor || 1;
 
   const appState = {
-    isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor, handleDeleteSupplier, handleDeleteLab, handleDeleteCat,
+    isOffline, setIsOffline, offlineQueue, setOfflineQueue, syncLogs, setSyncLogs, isSyncing, setIsSyncing, currentUser, setCurrentUser, authMode, setAuthMode, loginEmail, setLoginEmail, loginPassword, setLoginPassword, registerName, setRegisterName, registerEmail, setRegisterEmail, registerPassword, setRegisterPassword, registerRole, setRegisterRole, authError, setAuthError, authSuccess, setAuthSuccess, business, setBusiness, products, setProducts, suppliers, setSuppliers, laboratories, setLaboratories, categories, setCategories, sales, setSales, closures, setClosures, activeClosure, setActiveClosure, activeTab, setActiveTab, showTechAdvisory, setShowTechAdvisory, inventoryFormMode, setInventoryFormMode, manageSubTab, setManageSubTab, prodSearchQuery, setProdSearchQuery, prodCategoryFilter, setProdCategoryFilter, newProdName, setNewProdName, newProdExp, setNewProdExp, newProdLab, setNewProdLab, newProdCost, setNewProdCost, newProdPrice, setNewProdPrice, newProdCategory, setNewProdCategory, newProdSkins, setNewProdSkins, newProdUnits, setNewProdUnits, newProdFactor, setNewProdFactor, newProdMinAlert, setNewProdMinAlert, newProdBarcode, setNewProdBarcode, newProdBarcode2, setNewProdBarcode2, newProdBarcode3, setNewProdBarcode3, newProdFoto, setNewProdFoto, newProdSellMode, setNewProdSellMode, newProdPriceUnits, setNewProdPriceUnits, newSupName, setNewSupName, newSupNit, setNewSupNit, newSupPhone, setNewSupPhone, newSupWsp, setNewSupWsp, newLabName, setNewLabName, newCatName, setNewCatName, restockSupplierId, setRestockSupplierId, restockProductId, setRestockProductId, restockSkins, setRestockSkins, restockUnits, setRestockUnits, restockTotalUnits, setRestockTotalUnits, restockCost, setRestockCost, restockPrice, setRestockPrice, restockPriceUnits, setRestockPriceUnits, restockExp, setRestockExp, invoiceItems, setInvoiceItems, posSearchQuery, setPosSearchQuery, barcodeInput, setBarcodeInput, posCart, setPosCart, invoiceClientNit, setInvoiceClientNit, showInvoicePreview, setShowInvoicePreview, posAlertMessage, setPosAlertMessage, expenseDesc, setExpenseDesc, expenseAmount, setExpenseAmount, showHistoryModal, setShowHistoryModal, profileName, setProfileName, profileImage, setProfileImage, fetchInitialData, syncOfflineQueue, handleToggleOffline, handleLogin, handleRegister, handleLogout, handleCreateProduct, handleCreateSupplier, handleAddInvoiceItem, handleDeleteInvoiceItem, handleSaveFullInvoice, handleAddLab, handleAddCat, handleAddProductToCart, handleBarcodeSubmit, handleUpdateCartQty, handleRemoveFromCart, calculateCartTotals, handleCheckoutSale, handleAddExpense, handleFinalizeClosure, handleUpdateBusinessProfile, handleUpdatePersonalProfile, handleDownloadXLS, filteredProducts, totalInventoryCost, totalInventoryPriceValue, preseededBarcodes, restockSelectedProduct, isRestockProductAmbasMode, restockProductFactor, handleDeleteSupplier, handleDeleteLab, handleDeleteCat, handleDeleteProduct,
     activePrintInvoice, setActivePrintInvoice
   };
 
