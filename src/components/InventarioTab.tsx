@@ -149,53 +149,6 @@ export default function InventarioTab() {
   const [editBarcode3, setEditBarcode3] = React.useState("");
   const [editFoto, setEditFoto] = React.useState("");
   const [editSellMode, setEditSellMode] = React.useState<"unidad" | "sobres" | "ambas">("ambas");
-  const [editProfitPercentage, setEditProfitPercentage] = React.useState<string>("");
-
-  const handleEditPercentageChange = (pctStr: string) => {
-    setEditProfitPercentage(pctStr);
-    const pct = parseFloat(pctStr);
-    if (!isNaN(pct) && pct >= 0 && editPrice > 0) {
-      const calculatedCost = editPrice / (1 + pct / 100);
-      setEditCost(Math.round(calculatedCost));
-    }
-  };
-
-  const handleEditPriceChange = (priceVal: number) => {
-    setEditPrice(priceVal);
-    const pct = parseFloat(editProfitPercentage);
-    if (!isNaN(pct) && pct >= 0 && priceVal > 0) {
-      const calculatedCost = priceVal / (1 + pct / 100);
-      setEditCost(Math.round(calculatedCost));
-    }
-  };
-
-  const handleEditCostChange = (costVal: number) => {
-    setEditCost(costVal);
-    setEditProfitPercentage("");
-  };
-
-  const handlePercentageChange = (pctStr: string) => {
-    setProfitPercentage(pctStr);
-    const pct = parseFloat(pctStr);
-    if (!isNaN(pct) && pct >= 0 && newProdPrice > 0) {
-      const calculatedCost = newProdPrice / (1 + pct / 100);
-      setNewProdCost(Math.round(calculatedCost));
-    }
-  };
-
-  const handlePriceChange = (priceVal: number) => {
-    setNewProdPrice(priceVal);
-    const pct = parseFloat(profitPercentage);
-    if (!isNaN(pct) && pct >= 0 && priceVal > 0) {
-      const calculatedCost = priceVal / (1 + pct / 100);
-      setNewProdCost(Math.round(calculatedCost));
-    }
-  };
-
-  const handleCostChange = (costVal: number) => {
-    setNewProdCost(costVal);
-    setProfitPercentage("");
-  };
 
   const formatToMonth = (dateStr: string) => {
     if (!dateStr) return "";
@@ -204,12 +157,6 @@ export default function InventarioTab() {
     }
     return dateStr;
   };
-
-  React.useEffect(() => {
-    if (newProdName === "") {
-      setProfitPercentage("");
-    }
-  }, [newProdName]);
 
   const handleVerifyPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,7 +195,6 @@ export default function InventarioTab() {
           setEditBarcode3(bList[2] || "");
           setEditFoto(p.fotoUrl || "");
           setEditSellMode(p.conversionFactor > 1 ? "ambas" : (p.priceUnits ? "unidad" : "sobres"));
-          setEditProfitPercentage("");
         }
         setShowPasswordPromptForProduct(null);
         setEnteredPassword("");
