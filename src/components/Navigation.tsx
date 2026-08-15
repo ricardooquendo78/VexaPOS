@@ -13,25 +13,17 @@ export default function Navigation() {
         
         {/* Pestaña: Inventario */}
         <button
-          onClick={() => {
-            if (currentUser.role !== 'admin') {
-              alert("El inventario y administración general de productos es de manejo exclusivo para el Administrador.");
-              return;
-            }
-            setActiveTab("inventario");
-          }}
-          className={`w-full md:w-auto py-1.5 md:px-3 md:py-1.5 rounded-lg font-bold text-center flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 border transition-all ${
+          onClick={() => setActiveTab("inventario")}
+          className={`w-full md:w-auto py-1.5 md:px-3 md:py-1.5 rounded-lg font-bold text-center flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 border transition-all cursor-pointer ${
             activeTab === "inventario"
               ? "bg-slate-950 border-slate-950 text-white shadow-3xs"
-              : currentUser.role !== 'admin'
-                ? "bg-slate-50 border-slate-100 text-slate-350 cursor-not-allowed"
-                : "bg-white border-slate-200 text-slate-650 hover:bg-slate-50"
+              : "bg-white border-slate-200 text-slate-650 hover:bg-slate-50"
           }`}
         >
           <Package className="w-4 h-4 md:w-3.5 md:h-3.5" />
           <span className="text-[9px] md:text-xs block whitespace-nowrap">
             <span className="inline md:hidden">Inv.</span>
-            <span className="hidden md:inline">Inventario {currentUser.role !== 'admin' && '🔒'}</span>
+            <span className="hidden md:inline">Inventario</span>
           </span>
         </button>
 

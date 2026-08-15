@@ -514,7 +514,7 @@ export default function InventarioTab() {
   return (
     <>
       {/* TAB CONTENT: INVENTARIO */}
-      {activeTab === "inventario" && currentUser.role === "admin" && (
+      {activeTab === "inventario" && (
               <div className="w-full">
                 
                 <aside className="fixed left-0 top-[180px] z-30 w-12 bg-white border border-l-0 border-slate-200 shadow-md rounded-r-xl py-3 hidden md:flex flex-col gap-2.5 items-center">

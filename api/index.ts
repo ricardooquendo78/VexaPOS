@@ -837,6 +837,7 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const { password: _, ...userWithoutPassword } = user;
+    userWithoutPassword.role = user.role || "admin";
     res.json({ success: true, user: userWithoutPassword });
   } catch (err) {
     console.error("Login processing error:", err);

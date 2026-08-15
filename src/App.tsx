@@ -401,11 +401,12 @@ export default function App() {
       });
       const data = await response.json();
       if (data.success) {
-        setCurrentUser(data.user);
-        setProfileName(data.user.name);
-        setProfileImage(data.user.profileImage || "");
+        const userObj = { ...data.user, role: data.user.role || "admin" };
+        setCurrentUser(userObj);
+        setProfileName(userObj.name);
+        setProfileImage(userObj.profileImage || "");
         setAuthSuccess("¡Ingreso exitoso!");
-        setSyncLogs(prev => [`Usuario ${data.user.name} inició sesión.`, ...prev]);
+        setSyncLogs(prev => [`Usuario ${userObj.name} inició sesión.`, ...prev]);
       } else {
         setAuthError(data.message || "Credenciales incorrectas.");
       }
@@ -1288,7 +1289,7 @@ export default function App() {
             <Auth />
           ) : (
             <>
-              {activeTab === "inventario" && currentUser.role === "admin" && <InventarioTab />}
+              {activeTab === "inventario" && <InventarioTab />}
               {activeTab === "facturacion" && <FacturacionTab />}
               {activeTab === "cierre" && <CierreTab />}
               {activeTab === "reportes" && <ReportesTab />}
@@ -1331,7 +1332,7 @@ export default function App() {
 
       </div>
 
-      {currentUser && activeTab === "inventario" && currentUser.role === "admin" && (
+      {currentUser && activeTab === "inventario" && (
         <nav 
           className="fixed bottom-0 left-0 right-0 z-[9999] bg-white border-t border-slate-200 py-2 px-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] flex items-center justify-around md:hidden"
           style={{ 
