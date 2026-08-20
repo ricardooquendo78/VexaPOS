@@ -329,6 +329,33 @@ async function updatePersonalProfile(userId: string, name: string, profileImage:
   }
 }
 
+async function deleteUser(userId: string) {
+  if (mongoDb) {
+    await mongoDb.collection("users").deleteOne({ id: userId });
+    return;
+  }
+  const db = loadDb();
+  db.users = db.users.filter((u: any) => u.id !== userId);
+  saveDb(db);
+}
+
+async function updateUser(userId: string, updateData: any) {
+  if (mongoDb) {
+    const { _id, ...rest } = updateData;
+    await mongoDb.collection("users").updateOne(
+      { id: userId },
+      { $set: rest }
+    );
+    return;
+  }
+  const db = loadDb();
+  const userIdx = db.users.findIndex((u: any) => u.id === userId);
+  if (userIdx !== -1) {
+    db.users[userIdx] = { ...db.users[userIdx], ...updateData };
+    saveDb(db);
+  }
+}
+
 async function getBusinessConfig() {
   if (mongoDb) {
     const doc = await mongoDb.collection("config").findOne({ _id: "business_config" as any });
@@ -880,6 +907,108 @@ app.post("/api/profile/personal", async (req, res) => {
   } catch (err: any) {
     console.error("[Droguería Backend] Error updating personal profile:", err);
     res.status(500).json({ success: false, message: err.message || "Error interno del servidor." });
+  }
+});
+
+// Users Management API (Admin only)
+app.get("/api/users", async (req, res) => {
+  try {
+    const users = await getUsers();
+    const safeUsers = users.map((u: any) => {
+      const { password, ...safe } = u;
+      return {
+        ...safe,
+        role: safe.role || "worker",
+        createdAt: safe.createdAt || "2026-01-01T00:00:00.000Z"
+      };
+    });
+    res.json({ success: true, users: safeUsers });
+  } catch (err: any) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ success: false, message: "Error al obtener usuarios." });
+  }
+});
+
+app.post("/api/users", async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: "Nombre, correo y contraseña son obligatorios." });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const users = await getUsers();
+    const existing = users.find((u: any) => (u.email || "").trim().toLowerCase() === cleanEmail);
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Ya existe un usuario con este correo electrónico." });
+    }
+
+    const newUser = {
+      id: "usr-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+      name: name.trim(),
+      email: cleanEmail,
+      password: hashPassword(password),
+      role: (role === "admin") ? "admin" : "worker",
+      profileImage: "",
+      createdAt: new Date().toISOString()
+    };
+
+    await addUser(newUser);
+    const { password: _, ...safeUser } = newUser;
+    res.status(201).json({ success: true, user: safeUser });
+  } catch (err: any) {
+    console.error("Error creating user:", err);
+    res.status(500).json({ success: false, message: "Error al crear el usuario." });
+  }
+});
+
+app.post("/api/users/update", async (req, res) => {
+  try {
+    const { userId, name, role, password } = req.body;
+    if (!userId || !name) {
+      return res.status(400).json({ success: false, message: "ID de usuario y nombre son obligatorios." });
+    }
+
+    const updateFields: any = {
+      name: name.trim(),
+      role: (role === "admin") ? "admin" : "worker"
+    };
+
+    if (password && typeof password === "string" && password.trim().length > 0) {
+      updateFields.password = hashPassword(password.trim());
+    }
+
+    await updateUser(userId, updateFields);
+    res.json({ success: true, message: "Usuario actualizado correctamente." });
+  } catch (err: any) {
+    console.error("Error updating user:", err);
+    res.status(500).json({ success: false, message: "Error al actualizar el usuario." });
+  }
+});
+
+app.delete("/api/users/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const users = await getUsers();
+    const userToDelete = users.find((u: any) => u.id === userId);
+
+    if (!userToDelete) {
+      return res.status(404).json({ success: false, message: "Usuario no encontrado." });
+    }
+
+    // Check if deleting the last admin
+    if (userToDelete.role === "admin") {
+      const admins = users.filter((u: any) => u.role === "admin");
+      if (admins.length <= 1) {
+        return res.status(400).json({ success: false, message: "No se puede eliminar al único administrador del sistema." });
+      }
+    }
+
+    await deleteUser(userId);
+    res.json({ success: true, message: "Usuario eliminado exitosamente." });
+  } catch (err: any) {
+    console.error("Error deleting user:", err);
+    res.status(500).json({ success: false, message: "Error al eliminar usuario." });
   }
 });
 

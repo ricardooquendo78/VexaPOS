@@ -38,6 +38,7 @@ import FacturacionTab from './components/FacturacionTab';
 import CierreTab from './components/CierreTab';
 import ReportesTab from './components/ReportesTab';
 import PerfilTab from './components/PerfilTab';
+import UsuariosTab from './components/UsuariosTab';
 export function getBogotaDateStr(dateInput: Date = new Date()): string {
   try {
     if (!dateInput || isNaN(dateInput.getTime())) {
@@ -1371,6 +1372,7 @@ export default function App() {
               {activeTab === "facturacion" && <FacturacionTab />}
               {activeTab === "cierre" && <CierreTab />}
               {activeTab === "reportes" && <ReportesTab />}
+              {activeTab === "usuarios" && currentUser?.role === "admin" && <UsuariosTab />}
               {activeTab === "perfil" && <PerfilTab />}
             </>
           )}
