@@ -37,7 +37,7 @@ export default function Header() {
           <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50 p-0.5 sm:p-1 font-mono text-xs shadow-3xs">
             <button
               onClick={handleToggleOffline}
-              id="offline-btn"
+              id="online-btn"
               className={`flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-md transition-all font-semibold ${
                 !isOffline 
                   ? "bg-emerald-100 text-emerald-800 border border-emerald-200" 
@@ -50,7 +50,7 @@ export default function Header() {
             </button>
             <button
               onClick={handleToggleOffline}
-              id="online-btn"
+              id="offline-btn"
               className={`flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-md transition-all font-semibold ${
                 isOffline 
                   ? "bg-amber-100 text-amber-800 border border-amber-200" 

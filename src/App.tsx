@@ -1179,7 +1179,7 @@ export default function App() {
       setSyncLogs(prev => [`[Offline] Gasto registrado: ${payload.description}`, ...prev]);
     } else {
       try {
-        const response = await fetch("/api/closures/expense", {
+        const response = await fetch("/api/closure/expense", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -1208,7 +1208,7 @@ export default function App() {
     }
 
     try {
-      const response = await fetch("/api/closures/finalize", {
+      const response = await fetch("/api/closure/close", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ closureId: activeClosure.id })

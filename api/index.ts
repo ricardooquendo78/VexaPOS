@@ -1038,7 +1038,7 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
   const productsList = await getProducts();
 
   for (const item of items) {
-    const { productId, isNewProduct, name, laboratory, category, conversionFactor, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate, minStockAlert, barcode, fotoUrl } = item;
+    const { productId, isNewProduct, name, laboratory, category, conversionFactor, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate, minStockAlert, barcode, barcodes, fotoUrl } = item;
     try {
       const existingProduct = productsList.find(prod => prod.id === productId);
 
@@ -1047,6 +1047,10 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
         const finalId = (productId && !productId.startsWith("new-prod-"))
           ? productId
           : "prod-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4);
+
+        const barcodeList = Array.isArray(barcodes)
+          ? barcodes.filter((b: any) => typeof b === "string" && b.trim()).slice(0, 3)
+          : (barcode ? [barcode] : []);
 
         const newProductObj = {
           id: finalId,
@@ -1061,7 +1065,8 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
           quantityUnits: Number(quantityUnits) || 0,
           conversionFactor: Number(conversionFactor) || 1,
           minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
-          barcode: barcode || "",
+          barcode: barcodeList[0] || barcode || "",
+          barcodes: barcodeList,
           fotoUrl: fotoUrl || "",
           isActive: true
         };
@@ -1291,7 +1296,7 @@ app.get("/api/closure", async (req, res) => {
   res.json(active);
 });
 
-app.post("/api/closure/expense", async (req, res) => {
+app.post(["/api/closure/expense", "/api/closures/expense"], async (req, res) => {
   const todayStr = getBogotaDateStr();
   const { description, amount } = req.body;
 
@@ -1299,16 +1304,18 @@ app.post("/api/closure/expense", async (req, res) => {
     return res.status(400).json({ success: false, message: "Descripción y valor obligatorios." });
   }
 
-  const expObj = { id: "exp-" + Date.now(), description, amount: Number(amount), timestamp: new Date().toISOString() };
+  const expObj = { id: req.body.id || ("exp-" + Date.now()), description, amount: Number(amount), timestamp: req.body.timestamp || req.body.date || new Date().toISOString() };
   await addExpenseToClosure(todayStr, expObj);
 
   const updatedClosure = await getClosure(todayStr);
   res.json({ success: true, closure: updatedClosure });
 });
 
-app.post("/api/closure/close", async (req, res) => {
+app.post(["/api/closure/close", "/api/closures/finalize", "/api/closure/finalize"], async (req, res) => {
   const todayStr = getBogotaDateStr();
-  const closure = await getClosure(todayStr);
+  const closure = req.body?.closureId
+    ? ((await getClosures()).find((c: any) => c.id === req.body.closureId) || await getClosure(todayStr))
+    : await getClosure(todayStr);
 
   if (!closure) {
     return res.status(404).json({ success: false, message: "No hay cierre activo para procesar." });
@@ -1388,6 +1395,10 @@ app.post("/api/sync", async (req, res) => {
     else if (entity === "product") {
       const prodExists = productsList.some(p => p.id === data.id || p.name.toLowerCase() === data.name.toLowerCase());
       if (!prodExists) {
+        const barcodeList = Array.isArray(data.barcodes)
+          ? data.barcodes.filter((b: any) => typeof b === "string" && b.trim()).slice(0, 3)
+          : (data.barcode ? [data.barcode] : []);
+
         const newP = {
           id: data.id || "prod-" + Date.now(),
           name: data.name,
@@ -1395,12 +1406,14 @@ app.post("/api/sync", async (req, res) => {
           laboratory: data.laboratory,
           cost: Number(data.cost) || 0,
           price: Number(data.price) || 0,
+          priceUnits: data.priceUnits !== undefined ? Number(data.priceUnits) : undefined,
           category: data.category,
           quantityOnSkins: Number(data.quantityOnSkins) || 0,
           quantityUnits: Number(data.quantityUnits) || 0,
           conversionFactor: Number(data.conversionFactor) || 1,
           minStockAlert: (data.minStockAlert !== undefined && data.minStockAlert !== null && data.minStockAlert !== "" && !isNaN(Number(data.minStockAlert))) ? Math.max(0, Number(data.minStockAlert)) : 0,
-          barcode: data.barcode || "",
+          barcode: barcodeList[0] || data.barcode || "",
+          barcodes: barcodeList,
           fotoUrl: data.fotoUrl || "",
           isActive: true
         };
@@ -1413,6 +1426,10 @@ app.post("/api/sync", async (req, res) => {
     else if (entity === "product_edit") {
       const p = productsList.find(prod => prod.id === data.id);
       if (p) {
+        const barcodeList = Array.isArray(data.barcodes)
+          ? data.barcodes.filter((b: any) => typeof b === "string" && b.trim()).slice(0, 3)
+          : (data.barcode ? [data.barcode] : (p.barcodes || (p.barcode ? [p.barcode] : [])));
+
         const updated = {
           ...p,
           name: data.name,
@@ -1426,7 +1443,8 @@ app.post("/api/sync", async (req, res) => {
           quantityUnits: Number(data.quantityUnits) || 0,
           conversionFactor: Number(data.conversionFactor) || 1,
           minStockAlert: (data.minStockAlert !== undefined && data.minStockAlert !== null && data.minStockAlert !== "" && !isNaN(Number(data.minStockAlert))) ? Math.max(0, Number(data.minStockAlert)) : 0,
-          barcode: data.barcode || "",
+          barcode: barcodeList[0] || data.barcode || "",
+          barcodes: barcodeList,
           fotoUrl: data.fotoUrl || p.fotoUrl || ""
         };
         await updateProduct(data.id, updated);
@@ -1444,13 +1462,17 @@ app.post("/api/sync", async (req, res) => {
       
       for (const item of itemsToProcess) {
         try {
-          const { productId, isNewProduct, name, laboratory, category, conversionFactor, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate, minStockAlert, barcode, fotoUrl } = item;
+          const { productId, isNewProduct, name, laboratory, category, conversionFactor, quantitySkins, quantityUnits, cost, price, priceUnits, expirationDate, minStockAlert, barcode, barcodes, fotoUrl } = item;
           const existingProduct = productsList.find(prod => prod.id === productId);
 
           if (isNewProduct || !existingProduct) {
             const finalId = (productId && !productId.startsWith("new-prod-"))
               ? productId
               : "prod-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4);
+
+            const barcodeList = Array.isArray(barcodes)
+              ? barcodes.filter((b: any) => typeof b === "string" && b.trim()).slice(0, 3)
+              : (barcode ? [barcode] : []);
 
             const newProductObj = {
               id: finalId,
@@ -1465,7 +1487,8 @@ app.post("/api/sync", async (req, res) => {
               quantityUnits: Number(quantityUnits) || 0,
               conversionFactor: Number(conversionFactor) || 1,
               minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
-              barcode: barcode || "",
+              barcode: barcodeList[0] || barcode || "",
+              barcodes: barcodeList,
               fotoUrl: fotoUrl || "",
               isActive: true
             };

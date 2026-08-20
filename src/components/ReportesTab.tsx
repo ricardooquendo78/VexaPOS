@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
+import { getBogotaDateStr } from '../App';
 import { Package, FileText, TrendingDown, LineChart, FileSpreadsheet, Calendar, DollarSign, Clock, ListOrdered, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 
 export default function ReportesTab() {
@@ -27,17 +28,13 @@ export default function ReportesTab() {
   }, [activeTab, sales, closures]);
 
   // Bogota local timezone date helpers
-  const getTodayBogotaStr = () => {
-    const bogotaDate = new Date(new Date().getTime() - 5 * 60 * 60 * 1000);
-    return bogotaDate.toISOString().split("T")[0];
-  };
+  const getTodayBogotaStr = () => getBogotaDateStr();
 
   const getSaleBogotaDate = (dateTimeStr?: string) => {
     if (!dateTimeStr) return "";
     const d = new Date(dateTimeStr);
     if (isNaN(d.getTime())) return "";
-    const bogotaTime = new Date(d.getTime() - 5 * 60 * 60 * 1000);
-    return bogotaTime.toISOString().split("T")[0];
+    return getBogotaDateStr(d);
   };
 
   // Helper to calculate cost of goods sold (COGS) for a specific sale
