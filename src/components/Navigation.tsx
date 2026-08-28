@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Package, FileText, TrendingDown, LineChart, Settings, Users } from 'lucide-react';
+import { Package, FileText, TrendingDown, LineChart, Settings, Users, FolderCheck } from 'lucide-react';
 
 export default function Navigation() {
   const { currentUser, activeTab, setActiveTab } = useAppContext();
@@ -11,7 +11,7 @@ export default function Navigation() {
 
   return (
     <nav className="sticky top-[65px] md:top-[73px] z-30 bg-white border-b border-slate-200 py-1 md:py-1.5 px-2 md:px-8 w-full shadow-xs">
-      <div className={`max-w-7xl mx-auto grid ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'} md:flex md:flex-wrap items-center gap-1 md:gap-1.5 w-full`}>
+      <div className={`max-w-7xl mx-auto grid ${isAdmin ? 'grid-cols-7' : 'grid-cols-6'} md:flex md:flex-wrap items-center gap-1 md:gap-1.5 w-full`}>
         
         {/* Pestaña: Inventario */}
         <button
@@ -74,6 +74,22 @@ export default function Navigation() {
           <span className="text-[9px] md:text-xs block whitespace-nowrap">
             <span className="inline md:hidden">Rep.</span>
             <span className="hidden md:inline">Reportes</span>
+          </span>
+        </button>
+
+        {/* Pestaña: Documentos */}
+        <button
+          onClick={() => setActiveTab("documentos")}
+          className={`w-full md:w-auto py-1.5 md:px-3 md:py-1.5 rounded-lg font-bold text-center flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 border transition-all cursor-pointer ${
+            activeTab === "documentos"
+              ? "bg-slate-950 border-slate-950 text-white shadow-xs"
+              : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <FolderCheck className="w-4 h-4 md:w-3.5 md:h-3.5" />
+          <span className="text-[9px] md:text-xs block whitespace-nowrap">
+            <span className="inline md:hidden">Docs.</span>
+            <span className="hidden md:inline">Documentos</span>
           </span>
         </button>
 

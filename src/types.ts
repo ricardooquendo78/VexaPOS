@@ -103,3 +103,16 @@ export interface SyncLogEntry {
   details: string;
   status: "pending" | "resolved" | "conflict";
 }
+
+export interface DocumentItem {
+  id: string;
+  title: string;
+  category: "mercantil" | "tributario" | "sgc" | "legal";
+  categoryLabel: string;
+  description: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: string;
+  lastUpdated: string;
+  iconType: "certificate" | "tax" | "shield" | "quality";
+}
