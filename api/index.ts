@@ -65,10 +65,27 @@ interface AppState {
   supplierInvoices?: any[];
 }
 
+// Semilla del primer administrador. Solo se usa cuando no existe ninguna base
+// de datos previa; nunca sobreescribe usuarios ya creados en Atlas.
+function buildSeedUsers() {
+  const seedEmail = process.env.SEED_ADMIN_EMAIL;
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!seedEmail || !seedPassword) return [];
+  return [
+    {
+      id: "1",
+      name: "Administrador Vexa POS",
+      email: seedEmail.trim().toLowerCase(),
+      password: hashPassword(seedPassword),
+      role: "admin",
+      profileImage: "",
+      createdAt: new Date().toISOString()
+    }
+  ];
+}
+
 const DEFAULT_STATE: AppState = {
-  users: [
-    { id: "1", name: "Administrador Vexa POS", email: "drogueriagratamira@gmail.com", password: hashPassword("43518612"), role: "admin", profileImage: "" }
-  ],
+  users: buildSeedUsers(),
   config: {
     business: {
       name: "Vexa POS",
@@ -696,76 +713,141 @@ async function getNextInvoiceNumber(): Promise<string> {
     const seq = res && typeof res.seq === "number" ? res.seq : 1;
     return "FC-" + String(seq).padStart(5, "0");
   }
-  const db = loadDb();
-  const nextSeq = db.sales.length + 1;
+  // Contador persistido: usar db.sales.length repetía números de factura en
+  // cuanto se eliminaba una venta.
+  const db = loadDb() as any;
+  const nextSeq = (Number(db.invoiceCounter) || db.sales.length) + 1;
+  db.invoiceCounter = nextSeq;
+  saveDb(db);
   return "FC-" + String(nextSeq).padStart(5, "0");
 }
 
-async function adjustProductStock(productId: string, skinChange: number, unitChange: number, overrideFields?: { cost?: number, price?: number, priceUnits?: number, expirationDate?: string }): Promise<boolean> {
-  let currentSkins = 0;
-  let currentUnits = 0;
-  let conversionFactor = 1;
-
-  if (mongoDb) {
-    const prod = await mongoDb.collection("products").findOne({ id: productId });
-    if (!prod) return false;
-    currentSkins = prod.quantityOnSkins || 0;
-    currentUnits = prod.quantityUnits || 0;
-    conversionFactor = prod.conversionFactor || 1;
-  } else {
-    const db = loadDb();
-    const prod = db.products.find(p => p.id === productId);
-    if (!prod) return false;
-    currentSkins = prod.quantityOnSkins || 0;
-    currentUnits = prod.quantityUnits || 0;
-    conversionFactor = prod.conversionFactor || 1;
-  }
-
-  const totalUnitsInStock = (currentSkins * conversionFactor) + currentUnits;
-  const totalUnitsChange = (skinChange * conversionFactor) + unitChange;
-  const remainingTotalUnits = Math.max(0, totalUnitsInStock + totalUnitsChange);
-
-  let newSkins = 0;
-  let newUnits = 0;
-  if (conversionFactor > 1) {
-    newSkins = Math.floor(remainingTotalUnits / conversionFactor);
-    newUnits = remainingTotalUnits % conversionFactor;
-  } else {
-    newSkins = remainingTotalUnits;
-    newUnits = 0;
-  }
-
-  const updatedFields: any = {
-    quantityOnSkins: newSkins,
-    quantityUnits: newUnits
-  };
-
-  if (overrideFields) {
-    if (overrideFields.cost !== undefined) updatedFields.cost = overrideFields.cost;
-    if (overrideFields.price !== undefined) updatedFields.price = overrideFields.price;
-    if (overrideFields.priceUnits !== undefined) updatedFields.priceUnits = overrideFields.priceUnits;
-    if (overrideFields.expirationDate !== undefined) updatedFields.expirationDate = overrideFields.expirationDate;
-  }
-
-  if (mongoDb) {
-    const res = await mongoDb.collection("products").updateOne(
-      { id: productId },
-      { $set: updatedFields }
-    );
-    return res.matchedCount > 0;
-  } else {
-    const db = loadDb();
-    const idx = db.products.findIndex(p => p.id === productId);
-    if (idx !== -1) {
-      db.products[idx] = { ...db.products[idx], ...updatedFields };
-      saveDb(db);
-    }
-    return true;
-  }
+interface StockAdjustResult {
+  ok: boolean;
+  reason?: "not_found" | "insufficient" | "conflict";
+  availableUnits?: number;
+  requestedUnits?: number;
 }
 
-async function deductProductStock(productId: string, deductSkins: number, deductUnits: number): Promise<boolean> {
-  return adjustProductStock(productId, -deductSkins, -deductUnits);
+interface StockAdjustOptions {
+  // Permite que el resultado quede en cero en vez de rechazar la operación.
+  // Se usa al sincronizar ventas offline: esa venta ya ocurrió en el mostrador
+  // y no se puede rechazar, solo registrar el faltante.
+  allowNegative?: boolean;
+}
+
+// Ajusta el stock de un producto. En MongoDB usa compare-and-swap: la
+// escritura solo se aplica si las cantidades siguen siendo las que se leyeron,
+// de modo que dos ventas simultáneas del mismo producto no se pisen entre sí.
+async function adjustProductStock(
+  productId: string,
+  skinChange: number,
+  unitChange: number,
+  overrideFields?: { cost?: number, price?: number, priceUnits?: number, expirationDate?: string },
+  options: StockAdjustOptions = {}
+): Promise<StockAdjustResult> {
+  const MAX_ATTEMPTS = 5;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    let currentSkins = 0;
+    let currentUnits = 0;
+    let conversionFactor = 1;
+
+    if (mongoDb) {
+      const prod = await mongoDb.collection("products").findOne({ id: productId });
+      if (!prod) return { ok: false, reason: "not_found" };
+      currentSkins = prod.quantityOnSkins || 0;
+      currentUnits = prod.quantityUnits || 0;
+      conversionFactor = prod.conversionFactor || 1;
+    } else {
+      const db = loadDb();
+      const prod = db.products.find(p => p.id === productId);
+      if (!prod) return { ok: false, reason: "not_found" };
+      currentSkins = prod.quantityOnSkins || 0;
+      currentUnits = prod.quantityUnits || 0;
+      conversionFactor = prod.conversionFactor || 1;
+    }
+
+    const totalUnitsInStock = (currentSkins * conversionFactor) + currentUnits;
+    const totalUnitsChange = (skinChange * conversionFactor) + unitChange;
+    const resultingTotalUnits = totalUnitsInStock + totalUnitsChange;
+
+    if (resultingTotalUnits < 0 && !options.allowNegative) {
+      return {
+        ok: false,
+        reason: "insufficient",
+        availableUnits: totalUnitsInStock,
+        requestedUnits: Math.abs(totalUnitsChange)
+      };
+    }
+
+    const remainingTotalUnits = Math.max(0, resultingTotalUnits);
+    const normalized = normalizeQuantities(0, remainingTotalUnits, conversionFactor);
+
+    const updatedFields: any = {
+      quantityOnSkins: normalized.quantityOnSkins,
+      quantityUnits: normalized.quantityUnits
+    };
+
+    if (overrideFields) {
+      if (overrideFields.cost !== undefined) updatedFields.cost = overrideFields.cost;
+      if (overrideFields.price !== undefined) updatedFields.price = overrideFields.price;
+      if (overrideFields.priceUnits !== undefined) updatedFields.priceUnits = overrideFields.priceUnits;
+      if (overrideFields.expirationDate !== undefined) updatedFields.expirationDate = overrideFields.expirationDate;
+    }
+
+    if (mongoDb) {
+      // La condición incluye las cantidades leídas: si otra venta las cambió
+      // entre la lectura y la escritura, no coincide y se reintenta.
+      const res = await mongoDb.collection("products").updateOne(
+        { id: productId, quantityOnSkins: currentSkins, quantityUnits: currentUnits },
+        { $set: updatedFields }
+      );
+      if (res.matchedCount > 0) return { ok: true };
+      continue; // otro proceso ganó la carrera: releer y recalcular
+    }
+
+    const db = loadDb();
+    const idx = db.products.findIndex(p => p.id === productId);
+    if (idx === -1) return { ok: false, reason: "not_found" };
+    db.products[idx] = { ...db.products[idx], ...updatedFields };
+    saveDb(db);
+    return { ok: true };
+  }
+
+  console.error(`[Droguería Backend] No se pudo ajustar el stock de ${productId} tras varios reintentos.`);
+  return { ok: false, reason: "conflict" };
+}
+
+async function deductProductStock(
+  productId: string,
+  deductSkins: number,
+  deductUnits: number,
+  options: StockAdjustOptions = {}
+): Promise<StockAdjustResult> {
+  return adjustProductStock(productId, -deductSkins, -deductUnits, undefined, options);
+}
+
+// Unidades disponibles de un producto, expresadas en la unidad mínima.
+function totalUnitsOf(product: any): number {
+  const factor = Number(product.conversionFactor) || 1;
+  return (Number(product.quantityOnSkins) || 0) * factor + (Number(product.quantityUnits) || 0);
+}
+
+// Deja las cantidades en la forma canónica del inventario: las unidades
+// sueltas nunca pueden llegar o superar un sobre completo. Protege el dato
+// aunque el cliente envíe un total donde correspondía el sobrante.
+function normalizeQuantities(skins: any, units: any, factor: any) {
+  const conversionFactor = Math.max(1, Number(factor) || 1);
+  const totalUnits = Math.max(0, (Number(skins) || 0) * conversionFactor + (Number(units) || 0));
+  if (conversionFactor > 1) {
+    return {
+      quantityOnSkins: Math.floor(totalUnits / conversionFactor),
+      quantityUnits: totalUnits % conversionFactor,
+      conversionFactor
+    };
+  }
+  return { quantityOnSkins: totalUnits, quantityUnits: 0, conversionFactor };
 }
 
 async function incrementClosureTotals(date: string, totalRevenue: number, salesCountIncrement = 1) {
@@ -837,10 +919,167 @@ app.use("/api", async (req, res, next) => {
   next();
 });
 
+
+// ---------------------------------------------------------------------------
+// Sesiones: tokens firmados (HMAC-SHA256)
+// ---------------------------------------------------------------------------
+// Formato: base64url(payload).firmaHex  — sin estado en servidor, para que
+// funcione igual en Vercel (varias instancias) que en el servidor local.
+// La llave sale de SESSION_SECRET; si no está definida se genera una y se
+// persiste en la base de datos para que todas las instancias firmen igual.
+
+const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 días
+let sessionSecretCache: string | null = null;
+
+async function getSessionSecret(): Promise<string> {
+  if (sessionSecretCache) return sessionSecretCache;
+
+  const fromEnv = process.env.SESSION_SECRET;
+  if (fromEnv && fromEnv.length >= 16) {
+    sessionSecretCache = fromEnv;
+    return sessionSecretCache;
+  }
+
+  const generated = crypto.randomBytes(48).toString("hex");
+
+  if (mongoDb) {
+    // $setOnInsert + relectura: si dos instancias arrancan a la vez, ambas
+    // terminan usando la misma llave (la primera que quedó escrita).
+    await mongoDb.collection("config").updateOne(
+      { _id: "session_secret" as any },
+      { $setOnInsert: { secret: generated } },
+      { upsert: true }
+    );
+    const doc = await mongoDb.collection("config").findOne({ _id: "session_secret" as any });
+    sessionSecretCache = (doc && doc.secret) || generated;
+    console.warn("[Droguería Backend] SESSION_SECRET no está definida; usando la llave persistida en la base de datos.");
+    return sessionSecretCache;
+  }
+
+  const db = loadDb() as any;
+  if (!db.sessionSecret) {
+    db.sessionSecret = generated;
+    saveDb(db);
+  }
+  sessionSecretCache = db.sessionSecret;
+  return sessionSecretCache;
+}
+
+function toBase64Url(input: string): string {
+  return Buffer.from(input, "utf8").toString("base64")
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(input: string): string {
+  return Buffer.from(input.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+}
+
+async function createSessionToken(user: any): Promise<string> {
+  const secret = await getSessionSecret();
+  const payload = toBase64Url(JSON.stringify({
+    uid: user.id,
+    email: user.email,
+    role: user.role || "worker",
+    exp: Date.now() + TOKEN_TTL_MS
+  }));
+  const signature = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+  return `${payload}.${signature}`;
+}
+
+async function verifySessionToken(token: string): Promise<any | null> {
+  if (!token || typeof token !== "string") return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+
+  const [payload, signature] = parts;
+  try {
+    const secret = await getSessionSecret();
+    const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+    const signatureBuf = Buffer.from(signature, "hex");
+    const expectedBuf = Buffer.from(expected, "hex");
+    if (signatureBuf.length !== expectedBuf.length) return null;
+    if (!crypto.timingSafeEqual(signatureBuf, expectedBuf)) return null;
+
+    const data = JSON.parse(fromBase64Url(payload));
+    if (!data || typeof data.exp !== "number" || data.exp < Date.now()) return null;
+    return data;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Rutas que se pueden llamar sin sesión iniciada.
+const PUBLIC_API_ROUTES = new Set(["/health", "/auth/login", "/auth/register"]);
+
+// Puerta de entrada: toda ruta /api exige un token válido salvo las públicas.
+app.use("/api", async (req, res, next) => {
+  const route = req.path.replace(/\/+$/, "") || "/";
+  if (PUBLIC_API_ROUTES.has(route)) return next();
+
+  const header = String(req.headers.authorization || "");
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  const session = await verifySessionToken(token);
+
+  if (!session) {
+    return res.status(401).json({
+      success: false,
+      code: "UNAUTHENTICATED",
+      message: "Sesión no válida o expirada. Vuelva a iniciar sesión."
+    });
+  }
+
+  (req as any).session = session;
+  next();
+});
+
+// Restringe una ruta a administradores.
+function requireAdmin(req: any, res: any, next: any) {
+  const session = req.session;
+  if (!session || session.role !== "admin") {
+    return res.status(403).json({
+      success: false,
+      code: "FORBIDDEN",
+      message: "Esta acción requiere permisos de administrador."
+    });
+  }
+  next();
+}
+
 // Root health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "alive", timestamp: new Date().toISOString() });
 });
+
+// Freno simple a los intentos de adivinar contraseñas. Cuenta solo intentos
+// fallidos y se reinicia con cada ingreso exitoso, para no estorbarle a quien
+// simplemente se equivocó al escribir.
+const LOGIN_MAX_ATTEMPTS = 15;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
+
+function loginAttemptKey(req: any, email: string): string {
+  const ip = (req.headers["x-forwarded-for"] || "").toString().split(",")[0].trim() || req.ip || "unknown";
+  return `${ip}|${email}`;
+}
+
+function isLoginBlocked(key: string): boolean {
+  const record = loginAttempts.get(key);
+  if (!record) return false;
+  if (Date.now() - record.firstAttempt > LOGIN_WINDOW_MS) {
+    loginAttempts.delete(key);
+    return false;
+  }
+  return record.count >= LOGIN_MAX_ATTEMPTS;
+}
+
+function registerFailedLogin(key: string) {
+  const record = loginAttempts.get(key);
+  if (!record || Date.now() - record.firstAttempt > LOGIN_WINDOW_MS) {
+    loginAttempts.set(key, { count: 1, firstAttempt: Date.now() });
+    return;
+  }
+  record.count++;
+}
 
 // Authentication endpoints
 app.post("/api/auth/login", async (req, res) => {
@@ -851,12 +1090,24 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const attemptKey = loginAttemptKey(req, cleanEmail);
+
+    if (isLoginBlocked(attemptKey)) {
+      return res.status(429).json({
+        success: false,
+        message: "Demasiados intentos fallidos. Espere unos minutos e intente de nuevo."
+      });
+    }
+
     const users = await getUsers();
     const user = users.find(u => (u.email || "").trim().toLowerCase() === cleanEmail);
 
     if (!user || !user.password || !verifyPassword(password, user.password)) {
+      registerFailedLogin(attemptKey);
       return res.status(401).json({ success: false, message: "Correo o contraseña incorrectos." });
     }
+
+    loginAttempts.delete(attemptKey);
 
     // Auto-migrate legacy plain text passwords in database to secure hash format
     if (!user.password.startsWith("s2:")) {
@@ -865,11 +1116,34 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const { password: _, ...userWithoutPassword } = user;
-    userWithoutPassword.role = user.role || "admin";
-    res.json({ success: true, user: userWithoutPassword });
+    userWithoutPassword.role = user.role || "worker";
+    const token = await createSessionToken(userWithoutPassword);
+    res.json({ success: true, user: userWithoutPassword, token });
   } catch (err) {
     console.error("Login processing error:", err);
     res.status(500).json({ success: false, message: "Error interno al procesar el inicio de sesión." });
+  }
+});
+
+// Reconfirmación de contraseña del usuario en sesión (acciones sensibles)
+app.post("/api/auth/verify", async (req, res) => {
+  try {
+    const { password } = req.body;
+    const session = (req as any).session;
+    if (!password || typeof password !== "string") {
+      return res.status(400).json({ success: false, message: "Contraseña requerida." });
+    }
+
+    const users = await getUsers();
+    const user = users.find((u: any) => u.id === session.uid);
+    if (!user || !user.password || !verifyPassword(password, user.password)) {
+      return res.status(401).json({ success: false, message: "Contraseña incorrecta." });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Password verification error:", err);
+    res.status(500).json({ success: false, message: "Error al verificar la contraseña." });
   }
 });
 
@@ -887,7 +1161,7 @@ app.get("/api/profile", async (req, res) => {
   res.json({ business });
 });
 
-app.post("/api/profile/business", async (req, res) => {
+app.post("/api/profile/business", requireAdmin, async (req, res) => {
   const { name, nit, foundationYear, phone, address, city, logoUrl } = req.body;
   const business = { name, nit, foundationYear, phone, address, city, logoUrl };
   await updateBusinessConfig(business);
@@ -897,7 +1171,11 @@ app.post("/api/profile/business", async (req, res) => {
 app.post("/api/profile/personal", async (req, res) => {
   try {
     const { userId, name, profileImage } = req.body;
+    const session = (req as any).session;
     console.log("[Droguería Backend] POST /api/profile/personal request received:", { userId, name, profileImageLength: profileImage ? profileImage.length : 0 });
+    if (userId && session && userId !== session.uid && session.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Solo puede modificar su propio perfil." });
+    }
     if (!userId || !name) {
       console.warn("[Droguería Backend] Missing fields:", { userId, name });
       return res.status(400).json({ success: false, message: "Faltan campos obligatorios." });
@@ -912,7 +1190,7 @@ app.post("/api/profile/personal", async (req, res) => {
 });
 
 // Users Management API (Admin only)
-app.get("/api/users", async (req, res) => {
+app.get("/api/users", requireAdmin, async (req, res) => {
   try {
     const users = await getUsers();
     const safeUsers = users.map((u: any) => {
@@ -930,7 +1208,7 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-app.post("/api/users", async (req, res) => {
+app.post("/api/users", requireAdmin, async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password) {
@@ -963,7 +1241,7 @@ app.post("/api/users", async (req, res) => {
   }
 });
 
-app.post("/api/users/update", async (req, res) => {
+app.post("/api/users/update", requireAdmin, async (req, res) => {
   try {
     const { userId, name, role, password } = req.body;
     if (!userId || !name) {
@@ -987,7 +1265,7 @@ app.post("/api/users/update", async (req, res) => {
   }
 });
 
-app.delete("/api/users/:id", async (req, res) => {
+app.delete("/api/users/:id", requireAdmin, async (req, res) => {
   try {
     const userId = req.params.id;
     const users = await getUsers();
@@ -1044,9 +1322,7 @@ app.post("/api/inventory/initial", async (req, res) => {
       price: Number(price) || 0,
       priceUnits: priceUnits ? Number(priceUnits) : undefined,
       category,
-      quantityOnSkins: Number(quantityOnSkins) || 0,
-      quantityUnits: Number(quantityUnits) || 0,
-      conversionFactor: Number(conversionFactor) || 1,
+      ...normalizeQuantities(quantityOnSkins, quantityUnits, conversionFactor),
       minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
       barcode: barcodeList[0] || barcode || "",
       barcodes: barcodeList,
@@ -1089,9 +1365,7 @@ app.post("/api/inventory/update", async (req, res) => {
     price: Number(price) || 0,
     priceUnits: priceUnits !== undefined ? Number(priceUnits) : undefined,
     category,
-    quantityOnSkins: Number(quantityOnSkins) || 0,
-    quantityUnits: Number(quantityUnits) || 0,
-    conversionFactor: Number(conversionFactor) || 1,
+    ...normalizeQuantities(quantityOnSkins, quantityUnits, conversionFactor),
     minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
     barcode: barcodeList[0] || barcode || "",
     barcodes: barcodeList,
@@ -1142,7 +1416,7 @@ app.post("/api/inventory/invoice", async (req, res) => {
       overrideFields
     );
     
-    if (success) {
+    if (success.ok) {
       const productsList = await getProducts();
       const updated = productsList.find(prod => prod.id === productId);
       return res.json({ success: true, product: updated });
@@ -1191,9 +1465,7 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
           price: Number(price) || 0,
           priceUnits: priceUnits !== undefined && priceUnits !== null ? Number(priceUnits) : undefined,
           category: category || "General",
-          quantityOnSkins: Number(quantitySkins) || 0,
-          quantityUnits: Number(quantityUnits) || 0,
-          conversionFactor: Number(conversionFactor) || 1,
+          ...normalizeQuantities(quantitySkins, quantityUnits, conversionFactor),
           minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
           barcode: barcodeList[0] || barcode || "",
           barcodes: barcodeList,
@@ -1224,7 +1496,7 @@ app.post("/api/inventory/invoice/bulk", async (req, res) => {
           overrideFields
         );
 
-        if (success) {
+        if (success.ok) {
           updatedCount++;
           const factor = existingProduct.conversionFactor || 1;
           const itemSkins = Number(quantitySkins) || 0;
@@ -1345,43 +1617,124 @@ app.delete("/api/inventory/manage/categories", async (req, res) => {
   res.json({ success: true });
 });
 
+// Toma el precio enviado por el mostrador (permite descuentos puntuales) y
+// cae al precio del catálogo cuando no viene o no es un número válido.
+function resolveLinePrice(sent: any, catalogPrice: any): number {
+  const sentValue = Number(sent);
+  if (Number.isFinite(sentValue) && sentValue >= 0) return sentValue;
+  return Number(catalogPrice) || 0;
+}
+
 // Register POS Sales (facturación)
 app.post("/api/sales", async (req, res) => {
-  const { sellerId, sellerName, items, total, totalAmount, clientNit, dateTime, timestamp } = req.body;
+  const { sellerId, sellerName, items, clientNit, dateTime, timestamp } = req.body;
 
-  if (!items || items.length === 0) {
+  if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, message: "No hay productos en la factura." });
   }
 
-  const finalTotal = Number(total !== undefined ? total : totalAmount) || 0;
+  const productsList = await getProducts();
 
-  // Process product stock reduction
+  // 1) Validar todo contra el catálogo ANTES de tocar el inventario: el total
+  //    se recalcula aquí y no se acepta el que envía el cliente.
+  const normalizedItems: any[] = [];
+  const outOfStock: string[] = [];
+
   for (const item of items) {
-    try {
-      const skins = Number(item.quantitySkins ?? item.qtySkins) || 0;
-      const units = Number(item.quantityUnits ?? item.qtyUnits) || 0;
-      await deductProductStock(item.productId, skins, units);
-    } catch (err) {
-      console.error(`Error deconcurrente al deducir inventario para el producto ${item.productId}:`, err);
+    const product = productsList.find(p => p.id === item.productId);
+    if (!product) {
+      return res.status(400).json({
+        success: false,
+        message: `El producto "${item.productName || item.productId}" ya no existe en el inventario.`
+      });
     }
+
+    const skins = Math.max(0, Number(item.quantitySkins ?? item.qtySkins) || 0);
+    const units = Math.max(0, Number(item.quantityUnits ?? item.qtyUnits) || 0);
+    const factor = Number(product.conversionFactor) || 1;
+    const requestedUnits = (skins * factor) + units;
+
+    if (requestedUnits <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: `La cantidad de "${product.name}" debe ser mayor a cero.`
+      });
+    }
+
+    const availableUnits = totalUnitsOf(product);
+    if (requestedUnits > availableUnits) {
+      outOfStock.push(`${product.name} (disponibles: ${availableUnits}, solicitadas: ${requestedUnits})`);
+      continue;
+    }
+
+    const priceSkins = resolveLinePrice(item.priceSkins ?? item.price, product.price);
+    const priceUnits = resolveLinePrice(
+      item.priceUnits,
+      factor > 1 ? (product.priceUnits || (Number(product.price) || 0) / factor) : product.price
+    );
+    const subtotal = Math.round((skins * priceSkins) + (units * priceUnits));
+
+    normalizedItems.push({
+      productId: product.id,
+      productName: product.name,
+      quantitySkins: skins,
+      quantityUnits: units,
+      qtySkins: skins,
+      qtyUnits: units,
+      priceSkins,
+      priceUnits,
+      price: priceSkins,
+      subtotal
+    });
   }
+
+  if (outOfStock.length > 0) {
+    return res.status(409).json({
+      success: false,
+      code: "INSUFFICIENT_STOCK",
+      message: `No hay existencias suficientes para: ${outOfStock.join("; ")}.`
+    });
+  }
+
+  // 2) Descontar el inventario. Si una línea falla, se devuelve lo ya
+  //    descontado: nunca queda una venta a medias.
+  const applied: any[] = [];
+  for (const line of normalizedItems) {
+    let result: StockAdjustResult;
+    try {
+      result = await deductProductStock(line.productId, line.quantitySkins, line.quantityUnits);
+    } catch (err) {
+      console.error(`Error al deducir inventario para el producto ${line.productId}:`, err);
+      result = { ok: false, reason: "conflict" };
+    }
+
+    if (!result.ok) {
+      for (const done of applied) {
+        try {
+          await adjustProductStock(done.productId, done.quantitySkins, done.quantityUnits);
+        } catch (err) {
+          console.error(`Error al revertir el inventario de ${done.productId}:`, err);
+        }
+      }
+      const message = result.reason === "insufficient"
+        ? `Las existencias de "${line.productName}" cambiaron mientras se procesaba la venta. Verifique e intente de nuevo.`
+        : `No se pudo actualizar el inventario de "${line.productName}". La venta no fue registrada.`;
+      return res.status(409).json({ success: false, code: "STOCK_UPDATE_FAILED", message });
+    }
+    applied.push(line);
+  }
+
+  const finalTotal = normalizedItems.reduce((sum, line) => sum + line.subtotal, 0);
 
   const nextInvoiceNo = await getNextInvoiceNumber();
   const newInvoice = {
-    id: req.body.id || ("sale-" + Date.now()),
+    id: req.body.id || ("sale-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6)),
     invoiceNumber: req.body.invoiceNumber || nextInvoiceNo,
     dateTime: dateTime || timestamp || new Date().toISOString(),
     timestamp: timestamp || dateTime || new Date().toISOString(),
     sellerId: sellerId || "anonymous",
     sellerName: sellerName || "Vendedor",
-    items: items.map((it: any) => ({
-      ...it,
-      quantitySkins: Number(it.quantitySkins ?? it.qtySkins) || 0,
-      quantityUnits: Number(it.quantityUnits ?? it.qtyUnits) || 0,
-      qtySkins: Number(it.qtySkins ?? it.quantitySkins) || 0,
-      qtyUnits: Number(it.qtyUnits ?? it.quantityUnits) || 0,
-      subtotal: Number(it.subtotal ?? it.total) || 0
-    })),
+    items: normalizedItems,
     total: finalTotal,
     totalAmount: finalTotal,
     clientNit: clientNit || "",
@@ -1489,15 +1842,21 @@ app.post("/api/sync", async (req, res) => {
         try {
           const skins = Number(item.quantitySkins ?? item.qtySkins) || 0;
           const units = Number(item.quantityUnits ?? item.qtyUnits) || 0;
-          await deductProductStock(item.productId, skins, units);
+          // La venta ya ocurrió físicamente en el mostrador: no se puede
+          // rechazar. Si el inventario no alcanza, queda en cero y se avisa.
+          const result = await deductProductStock(item.productId, skins, units, { allowNegative: true });
+          if (!result.ok) {
+            logs.push(`Aviso: no se pudo descontar "${item.productName || item.productId}" del inventario; revise sus existencias.`);
+          }
         } catch (err) {
-          console.error(`Error deconcurrente al deducir inventario offline para el producto ${item.productId}:`, err);
+          console.error(`Error al deducir inventario offline para el producto ${item.productId}:`, err);
+          logs.push(`Aviso: error descontando "${item.productName || item.productId}" del inventario.`);
         }
       }
 
       const invoiceNo = data.invoiceNumber || (await getNextInvoiceNumber());
       const newSale = {
-        id: data.id || "sale-" + Date.now(),
+        id: data.id || ("sale-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6)),
         invoiceNumber: invoiceNo,
         dateTime: data.dateTime || data.timestamp || timestamp || new Date().toISOString(),
         timestamp: data.timestamp || data.dateTime || timestamp || new Date().toISOString(),
@@ -1613,9 +1972,7 @@ app.post("/api/sync", async (req, res) => {
               price: Number(price) || 0,
               priceUnits: priceUnits !== undefined && priceUnits !== null ? Number(priceUnits) : undefined,
               category: category || "General",
-              quantityOnSkins: Number(quantitySkins) || 0,
-              quantityUnits: Number(quantityUnits) || 0,
-              conversionFactor: Number(conversionFactor) || 1,
+              ...normalizeQuantities(quantitySkins, quantityUnits, conversionFactor),
               minStockAlert: (minStockAlert !== undefined && minStockAlert !== null && minStockAlert !== "" && !isNaN(Number(minStockAlert))) ? Math.max(0, Number(minStockAlert)) : 0,
               barcode: barcodeList[0] || barcode || "",
               barcodes: barcodeList,
@@ -1644,7 +2001,7 @@ app.post("/api/sync", async (req, res) => {
               Number(quantityUnits) || 0,
               overrideFields
             );
-            if (success) {
+            if (success.ok) {
               restockedCount++;
               const factor = existingProduct.conversionFactor || 1;
               const itemSkins = Number(quantitySkins) || 0;

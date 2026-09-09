@@ -30,6 +30,16 @@ import TechAdvisory from "./components/TechAdvisory";
 import faviconUrl from "./img/favicon.png";
 
 import { AppContext } from './context/AppContext';
+import {
+  apiFetch,
+  setToken,
+  clearToken,
+  hasLegacySession,
+  setUnauthorizedHandler,
+  cacheOfflineCredential,
+  verifyOfflineCredential,
+  clearOfflineCredential
+} from './lib/session';
 import Header from './components/Header';
 import Auth from './components/Auth';
 import Navigation from './components/Navigation';
@@ -66,12 +76,25 @@ export function getBogotaDateStr(dateInput: Date = new Date()): string {
 export default function App() {
 // Offline state simulator representation
   const [isOffline, setIsOffline] = useState<boolean>(false);
-  const [offlineQueue, setOfflineQueue] = useState<any[]>([]);
+  // La cola de cambios pendientes se guarda en el equipo: si el navegador se
+  // cierra o se refresca antes de sincronizar, las ventas no se pierden.
+  const [offlineQueue, setOfflineQueue] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("vexapos_offline_queue");
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const [syncLogs, setSyncLogs] = useState<string[]>(["Sistema en línea. Listo para procesar."]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   const [currentUser, setCurrentUser] = useState<any | null>(() => {
     try {
+      // Sesión abierta con la versión anterior (sin token): se pide reingreso
+      // aquí, al abrir la app, y no a mitad de una venta.
+      if (hasLegacySession()) return null;
       const savedUser = localStorage.getItem("vexapos_user");
       return savedUser ? JSON.parse(savedUser) : null;
     } catch {
@@ -86,7 +109,11 @@ export default function App() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerRole, setRegisterRole] = useState<"admin" | "worker">("worker");
-  const [authError, setAuthError] = useState("");
+  const [authError, setAuthError] = useState(() =>
+    hasLegacySession()
+      ? "Actualizamos la seguridad del sistema. Por favor ingrese nuevamente."
+      : ""
+  );
   const [authSuccess, setAuthSuccess] = useState("");
 
   // Business Profile Info
@@ -232,6 +259,15 @@ export default function App() {
     return "";
   });
 
+  // Persistir la cola pendiente ante cualquier cambio.
+  useEffect(() => {
+    try {
+      localStorage.setItem("vexapos_offline_queue", JSON.stringify(offlineQueue));
+    } catch (err) {
+      /* almacenamiento no disponible */
+    }
+  }, [offlineQueue]);
+
   // Sync user session to localStorage
   useEffect(() => {
     if (currentUser) {
@@ -252,8 +288,11 @@ export default function App() {
     }
   }, [activePrintInvoice]);
 
-  // Simulate local database preseed on load and poll every 30 seconds
+  // Carga inicial y refresco cada 30 segundos. Solo con sesión iniciada: sin
+  // ella la API responde 401 y no tiene sentido consultarla.
   useEffect(() => {
+    if (!currentUser) return;
+
     fetchInitialData();
 
     const interval = setInterval(() => {
@@ -263,7 +302,7 @@ export default function App() {
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, [isOffline]);
+  }, [isOffline, currentUser]);
 
   // Synchronize browser tab title and favicon with the business name & brand favicon
   useEffect(() => {
@@ -285,7 +324,7 @@ export default function App() {
 
   const fetchInitialData = async () => {
     try {
-      const response = await fetch("/api/inventory");
+      const response = await apiFetch("/api/inventory");
       if (response.ok) {
         const prodData = await response.json();
         const sorted = (Array.isArray(prodData) ? prodData : []).sort((a: any, b: any) =>
@@ -294,7 +333,7 @@ export default function App() {
         setProducts(sorted);
       }
       
-      const supResp = await fetch("/api/inventory/manage/suppliers");
+      const supResp = await apiFetch("/api/inventory/manage/suppliers");
       if (supResp.ok) {
         const supData = await supResp.json();
         const sortedSup = (Array.isArray(supData) ? supData : []).sort((a: any, b: any) =>
@@ -303,7 +342,7 @@ export default function App() {
         setSuppliers(sortedSup);
       }
 
-      const labsResp = await fetch("/api/inventory/manage/laboratories");
+      const labsResp = await apiFetch("/api/inventory/manage/laboratories");
       if (labsResp.ok) {
         const labsData = await labsResp.json();
         const sortedLabs = (Array.isArray(labsData) ? labsData : []).sort((a: string, b: string) =>
@@ -312,7 +351,7 @@ export default function App() {
         setLaboratories(sortedLabs);
       }
 
-      const catsResp = await fetch("/api/inventory/manage/categories");
+      const catsResp = await apiFetch("/api/inventory/manage/categories");
       if (catsResp.ok) {
         const catsData = await catsResp.json();
         const sortedCats = (Array.isArray(catsData) ? catsData : []).sort((a: string, b: string) =>
@@ -321,23 +360,23 @@ export default function App() {
         setCategories(sortedCats);
       }
 
-      const salesResp = await fetch("/api/sales");
+      const salesResp = await apiFetch("/api/sales");
       if (salesResp.ok) {
         setSales(await salesResp.json());
       }
 
-      const closuresResp = await fetch("/api/closure/history");
+      const closuresResp = await apiFetch("/api/closure/history");
       if (closuresResp.ok) {
         setClosures(await closuresResp.json());
       }
 
-      const closureActiveResp = await fetch("/api/closure");
+      const closureActiveResp = await apiFetch("/api/closure");
       if (closureActiveResp.ok) {
         const activeC = await closureActiveResp.json();
         setActiveClosure(activeC);
       }
 
-      const profileResp = await fetch("/api/profile");
+      const profileResp = await apiFetch("/api/profile");
       if (profileResp.ok) {
         const profileData = await profileResp.json();
         if (profileData.business) {
@@ -355,7 +394,7 @@ export default function App() {
     setSyncLogs(prev => [`Iniciando Sincronización de ${queueToSync.length} cambios pendientes...`, ...prev]);
     
     try {
-      const response = await fetch("/api/sync", {
+      const response = await apiFetch("/api/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientActions: queueToSync })
@@ -396,31 +435,44 @@ export default function App() {
     setAuthError("");
     setAuthSuccess("");
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginEmail, password: loginPassword })
       });
       const data = await response.json();
-      if (data.success) {
-        const userObj = { ...data.user, role: data.user.role || "admin" };
+      if (data.success && data.token) {
+        const userObj = { ...data.user, role: data.user.role || "worker" };
+        setToken(data.token);
+        // Habilita el reingreso en este equipo si más adelante se cae internet.
+        await cacheOfflineCredential(loginEmail, loginPassword, userObj);
         setCurrentUser(userObj);
         setProfileName(userObj.name);
         setProfileImage(userObj.profileImage || "");
+        setLoginPassword("");
         setAuthSuccess("¡Ingreso exitoso!");
         setSyncLogs(prev => [`Usuario ${userObj.name} inició sesión.`, ...prev]);
+        // Si quedaron cambios sin subir (por ejemplo por una sesión vencida
+        // a mitad de jornada), se envían apenas se recupera la sesión.
+        if (offlineQueue.length > 0 && !isOffline) {
+          syncOfflineQueue();
+        }
       } else {
         setAuthError(data.message || "Credenciales incorrectas.");
       }
     } catch (err) {
-      // Offline fallback
-      if (loginEmail === "drogueriagratamira@gmail.com" && loginPassword === "43518612") {
-        const fallbackAdmin = { id: "1", name: "Admin (Offline Fallback)", email: "drogueriagratamira@gmail.com", role: "admin" as const };
-        setCurrentUser(fallbackAdmin);
-        setProfileName(fallbackAdmin.name);
-        setAuthSuccess("Ingreso offline exitoso.");
+      // Sin conexión: se valida contra la credencial guardada en este equipo
+      // durante el último ingreso exitoso en línea.
+      const offlineUser = await verifyOfflineCredential(loginEmail, loginPassword);
+      if (offlineUser) {
+        setCurrentUser(offlineUser);
+        setProfileName(offlineUser.name);
+        setProfileImage(offlineUser.profileImage || "");
+        setLoginPassword("");
+        setAuthSuccess("Ingreso offline exitoso. Los cambios se sincronizarán al recuperar la conexión.");
+        setSyncLogs(prev => [`Usuario ${offlineUser.name} inició sesión sin conexión.`, ...prev]);
       } else {
-        setAuthError("No se pudo conectar al servidor y las credenciales no coinciden.");
+        setAuthError("No se pudo conectar al servidor y las credenciales no coinciden con las guardadas en este equipo.");
       }
     }
   };
@@ -431,10 +483,25 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    clearToken();
+    clearOfflineCredential();
     setCurrentUser(null);
+    setLoginPassword("");
     setAuthSuccess("");
     setAuthError("");
   };
+
+  // El servidor rechazó la sesión (token vencido o llave rotada). Se pide
+  // reingreso sin desmontar la app, para no perder el carrito ni la cola
+  // de cambios pendientes de sincronizar.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setCurrentUser(null);
+      setLoginPassword("");
+      setAuthSuccess("");
+      setAuthError("Su sesión expiró. Por favor ingrese nuevamente.");
+    });
+  }, []);
 
   // Add product form
   const handleCreateProduct = async (e: React.FormEvent) => {
@@ -499,7 +566,7 @@ export default function App() {
       setSyncLogs(prev => [`[Offline] Producto creado localmente: "${payload.name}"`, ...prev]);
     } else {
       try {
-        const response = await fetch("/api/inventory/initial", {
+        const response = await apiFetch("/api/inventory/initial", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -559,7 +626,7 @@ export default function App() {
     };
 
     try {
-      const response = await fetch("/api/inventory/manage/suppliers", {
+      const response = await apiFetch("/api/inventory/manage/suppliers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -767,7 +834,7 @@ export default function App() {
       setSyncLogs(prev => [`Factura de proveedor (${invoiceItems.length} referencias) acumulada fuera de línea.`, ...prev]);
     } else {
       try {
-        const response = await fetch("/api/inventory/invoice/bulk", {
+        const response = await apiFetch("/api/inventory/invoice/bulk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -804,7 +871,7 @@ export default function App() {
   const handleAddLab = async () => {
     if (!newLabName) return;
     try {
-      const resp = await fetch("/api/inventory/manage/laboratories", {
+      const resp = await apiFetch("/api/inventory/manage/laboratories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newLabName })
@@ -821,7 +888,7 @@ export default function App() {
   const handleAddCat = async () => {
     if (!newCatName) return;
     try {
-      const resp = await fetch("/api/inventory/manage/categories", {
+      const resp = await apiFetch("/api/inventory/manage/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newCatName })
@@ -838,7 +905,7 @@ export default function App() {
   const handleDeleteSupplier = async (id: string) => {
     if (!confirm("¿Está seguro de eliminar este proveedor?")) return;
     try {
-      const resp = await fetch(`/api/inventory/manage/suppliers/${id}`, {
+      const resp = await apiFetch(`/api/inventory/manage/suppliers/${id}`, {
         method: "DELETE"
       });
       if (resp.ok) {
@@ -852,7 +919,7 @@ export default function App() {
   const handleDeleteLab = async (name: string) => {
     if (!confirm(`¿Está seguro de eliminar el laboratorio ${name}?`)) return;
     try {
-      const resp = await fetch("/api/inventory/manage/laboratories", {
+      const resp = await apiFetch("/api/inventory/manage/laboratories", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name })
@@ -868,7 +935,7 @@ export default function App() {
   const handleDeleteCat = async (name: string) => {
     if (!confirm(`¿Está seguro de eliminar la categoría ${name}?`)) return;
     try {
-      const resp = await fetch("/api/inventory/manage/categories", {
+      const resp = await apiFetch("/api/inventory/manage/categories", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name })
@@ -897,7 +964,7 @@ export default function App() {
       setSyncLogs(prev => [`[Offline] Producto eliminado localmente: "${prodName}"`, ...prev]);
     } else {
       try {
-        const response = await fetch("/api/inventory/delete", {
+        const response = await apiFetch("/api/inventory/delete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id })
@@ -1110,7 +1177,7 @@ export default function App() {
       setSyncLogs(prev => [`[Offline] Venta registrada ${invoiceNum} por $${total.toLocaleString("es-CO")}`, ...prev]);
     } else {
       try {
-        const response = await fetch("/api/sales", {
+        const response = await apiFetch("/api/sales", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(salePayload)
@@ -1118,6 +1185,14 @@ export default function App() {
         if (response.ok) {
           setSyncLogs(prev => [`[Servidor] Venta sincronizada exitosa ${invoiceNum}`, ...prev]);
           fetchInitialData();
+        } else if (response.status === 400 || response.status === 409) {
+          // El servidor rechazó la venta (sin existencias, producto borrado).
+          // No se encola ni se imprime: el carrito queda intacto para corregir.
+          const errData = await response.json().catch(() => ({} as any));
+          alert(errData.message || "No se pudo registrar la venta. Verifique las existencias.");
+          setSyncLogs(prev => [`[Servidor] Venta rechazada: ${errData.message || "sin detalle"}`, ...prev]);
+          fetchInitialData();
+          return;
         } else {
           // Fallback to local queue on non-200
           setSales(prev => [salePayload, ...prev]);
@@ -1181,7 +1256,7 @@ export default function App() {
       setSyncLogs(prev => [`[Offline] Gasto registrado: ${payload.description}`, ...prev]);
     } else {
       try {
-        const response = await fetch("/api/closure/expense", {
+        const response = await apiFetch("/api/closure/expense", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -1210,7 +1285,7 @@ export default function App() {
     }
 
     try {
-      const response = await fetch("/api/closure/close", {
+      const response = await apiFetch("/api/closure/close", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ closureId: activeClosure.id })
@@ -1228,7 +1303,7 @@ export default function App() {
   const handleUpdateBusinessProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch("/api/profile/business", {
+      const response = await apiFetch("/api/profile/business", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(business)
@@ -1245,7 +1320,7 @@ export default function App() {
     e.preventDefault();
     if (!currentUser) return;
     try {
-      const response = await fetch("/api/profile/personal", {
+      const response = await apiFetch("/api/profile/personal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1332,17 +1407,29 @@ export default function App() {
     return acc + skinValue + unitValue;
   }, 0);
 
+  // Retorno comercial esperado: por cada producto se toma el escenario que más
+  // rinde, vender los sobres completos como sobres o fraccionarlo todo por
+  // unidad. En los productos donde la unidad se vende más cara que el sobre
+  // proporcional, fraccionar deja más, y así queda reflejado.
   const totalInventoryPriceValue = (products || []).reduce((acc, p) => {
     if (!p) return acc;
     const skins = Number(p.quantityOnSkins) || 0;
+    const units = Number(p.quantityUnits) || 0;
     const price = Number(p.price) || 0;
     const factor = Number(p.conversionFactor) || 1;
-    const units = Number(p.quantityUnits) || 0;
-    const skinValue = skins * price;
-    const unitValue = factor > 1 
-      ? units * (p.priceUnits && Number(p.priceUnits) > 0 ? Number(p.priceUnits) : (price / factor)) 
-      : 0;
-    return acc + skinValue + unitValue;
+
+    if (factor <= 1) {
+      return acc + (skins * price);
+    }
+
+    const unitPrice = (p.priceUnits && Number(p.priceUnits) > 0)
+      ? Number(p.priceUnits)
+      : (price / factor);
+
+    const valueAsSkins = (skins * price) + (units * unitPrice);
+    const valueAsUnits = ((skins * factor) + units) * unitPrice;
+
+    return acc + Math.max(valueAsSkins, valueAsUnits);
   }, 0);
 
   // Auto add preseeded code trigger list
