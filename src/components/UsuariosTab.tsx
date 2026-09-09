@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { apiFetch } from '../lib/session';
 import { 
   Users, 
   UserPlus, 
@@ -83,7 +84,7 @@ export default function UsuariosTab() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/users');
+      const response = await apiFetch('/api/users');
       const data = await response.json();
       if (data.success && Array.isArray(data.users)) {
         setUsersList(data.users);
@@ -124,7 +125,7 @@ export default function UsuariosTab() {
 
     setIsSubmittingCreate(true);
     try {
-      const response = await fetch('/api/users', {
+      const response = await apiFetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,7 +168,7 @@ export default function UsuariosTab() {
 
     setIsSubmittingEdit(true);
     try {
-      const response = await fetch('/api/users/update', {
+      const response = await apiFetch('/api/users/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -215,7 +216,7 @@ export default function UsuariosTab() {
 
     setIsSubmittingPassword(true);
     try {
-      const response = await fetch('/api/users/update', {
+      const response = await apiFetch('/api/users/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -249,7 +250,7 @@ export default function UsuariosTab() {
     setIsSubmittingDelete(true);
 
     try {
-      const response = await fetch(`/api/users/${showDeleteModal.id}`, {
+      const response = await apiFetch(`/api/users/${showDeleteModal.id}`, {
         method: 'DELETE'
       });
       const data = await response.json();

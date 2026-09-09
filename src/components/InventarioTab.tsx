@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
+import { apiFetch, verifyOfflineCredential } from '../lib/session';
 import { Camera, Package, FileText, TrendingDown, LineChart, User, Settings, Plus, Search, AlertCircle, FileSpreadsheet, Building, CheckCircle, Trash2, Barcode, Printer, X, CreditCard, UserCheck, LogOut, Wifi, WifiOff, RefreshCw, PlusCircle, Info } from 'lucide-react';
 import TechAdvisory from './TechAdvisory';
 import BarcodeScannerModal from './BarcodeScannerModal';
@@ -38,6 +39,12 @@ export default function InventarioTab() {
     }
 
     if (inventoryFormMode === "invoice") {
+      // Convención del inventario (la misma que usa handleCreateProduct):
+      //   quantityOnSkins  = sobres/cajas completos
+      //   quantityUnits    = unidades sueltas SOBRANTES (nunca el total)
+      //   conversionFactor = unidades por sobre (1 si no aplica)
+      // En los modos "unidad" y "sobres" la cantidad se captura siempre en
+      // newProdSkins, que es el campo que renderiza el formulario.
       const factor = newProdSellMode === "ambas" ? (Number(newProdFactor) || 10) : 1;
       let skins = 0;
       let units = 0;
@@ -45,16 +52,18 @@ export default function InventarioTab() {
 
       if (newProdSellMode === "ambas") {
         skins = Number(newProdSkins) || 0;
-        units = Number(newProdUnits) || 0;
+        // newProdUnits guarda el TOTAL de unidades; al inventario va el sobrante.
+        units = (Number(newProdUnits) || 0) % factor;
         totalUnits = (skins * factor) + units;
-      } else if (newProdSellMode === "sobres") {
+      } else {
         skins = Number(newProdSkins) || 0;
         units = 0;
         totalUnits = skins;
-      } else { // "unidad"
-        skins = 0;
-        units = Number(newProdUnits) || 0;
-        totalUnits = units;
+      }
+
+      if (totalUnits <= 0) {
+        alert("Indique la cantidad que ingresa con esta factura antes de agregar el producto.");
+        return;
       }
 
       const barcodesList = [newProdBarcode, newProdBarcode2, newProdBarcode3]
@@ -193,7 +202,8 @@ export default function InventarioTab() {
     };
 
     if (isOffline) {
-      if (enteredPassword === "43518612" || (loginPassword && enteredPassword === loginPassword)) {
+      const offlineUser = await verifyOfflineCredential(currentUser.email, enteredPassword);
+      if (offlineUser) {
         openEditModal();
       } else {
         setPasswordError("Contraseña incorrecta en modo local/offline.");
@@ -203,10 +213,10 @@ export default function InventarioTab() {
     }
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await apiFetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: currentUser.email, password: enteredPassword })
+        body: JSON.stringify({ password: enteredPassword })
       });
       const data = await response.json();
       if (data.success) {
@@ -215,7 +225,8 @@ export default function InventarioTab() {
         setPasswordError("Contraseña incorrecta. Inténtelo de nuevo.");
       }
     } catch (err) {
-      if (enteredPassword === "43518612" || (loginPassword && enteredPassword === loginPassword)) {
+      const offlineUser = await verifyOfflineCredential(currentUser.email, enteredPassword);
+      if (offlineUser) {
         openEditModal();
       } else {
         setPasswordError("Error de conexión al verificar la contraseña.");
@@ -245,7 +256,8 @@ export default function InventarioTab() {
     };
 
     if (isOffline) {
-      if (deleteEnteredPassword === "43518612" || (loginPassword && deleteEnteredPassword === loginPassword)) {
+      const offlineUser = await verifyOfflineCredential(currentUser.email, deleteEnteredPassword);
+      if (offlineUser) {
         await performDelete();
       } else {
         setDeletePasswordError("Contraseña incorrecta en modo local/offline.");
@@ -255,10 +267,10 @@ export default function InventarioTab() {
     }
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await apiFetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: currentUser.email, password: deleteEnteredPassword })
+        body: JSON.stringify({ password: deleteEnteredPassword })
       });
       const data = await response.json();
       if (data.success) {
@@ -267,7 +279,8 @@ export default function InventarioTab() {
         setDeletePasswordError("Contraseña incorrecta. Inténtelo de nuevo.");
       }
     } catch (err) {
-      if (deleteEnteredPassword === "43518612" || (loginPassword && deleteEnteredPassword === loginPassword)) {
+      const offlineUser = await verifyOfflineCredential(currentUser.email, deleteEnteredPassword);
+      if (offlineUser) {
         await performDelete();
       } else {
         setDeletePasswordError("Error de conexión al verificar la contraseña.");
@@ -335,7 +348,7 @@ export default function InventarioTab() {
       setEditingProduct(null);
     } else {
       try {
-        const response = await fetch("/api/inventory/update", {
+        const response = await apiFetch("/api/inventory/update", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)

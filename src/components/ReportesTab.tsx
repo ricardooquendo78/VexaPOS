@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
+import { apiFetch } from '../lib/session';
 import { getBogotaDateStr } from '../App';
 import { Package, FileText, TrendingDown, LineChart, FileSpreadsheet, Calendar, DollarSign, Clock, ListOrdered, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 
@@ -520,7 +521,7 @@ export default function ReportesTab() {
                 <strong className="text-xl font-black text-teal-700 block mt-0.5">
                   ${totalInventoryPriceValue.toLocaleString("es-CO")} COP
                 </strong>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Proyección de valor de venta final esperado</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">Valor de venta al mejor precio: por sobre o fraccionado por unidad</span>
               </div>
               <TrendingDown className="w-9 h-9 text-emerald-600/20 flex-shrink-0" />
             </div>
