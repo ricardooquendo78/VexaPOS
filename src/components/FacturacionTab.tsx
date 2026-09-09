@@ -18,20 +18,45 @@ export default function FacturacionTab() {
   const [showCameraScanner, setShowCameraScanner] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Resumen del día. Se calcula igual que en Reportes (fecha de Bogotá) para
-  // que ambas pestañas muestren siempre la misma cifra. Incluye las ventas
-  // hechas sin conexión que aún no se han sincronizado.
-  const todaySummary = React.useMemo(() => {
+  // Resumen de hoy y de ayer. Se calcula igual que en Reportes (fecha de
+  // Bogotá) para que ambas pestañas muestren siempre la misma cifra. Incluye
+  // las ventas hechas sin conexión que aún no se han sincronizado.
+  const daySummary = React.useMemo(() => {
     const todayStr = getBogotaDateStr();
-    const todaySales = (sales || []).filter((s: any) => {
-      const date = new Date(s.dateTime || s.timestamp);
-      if (isNaN(date.getTime())) return false;
-      return getBogotaDateStr(date) === todayStr;
-    });
-    return {
-      count: todaySales.length,
-      revenue: todaySales.reduce((acc: number, s: any) => acc + (Number(s.total ?? s.totalAmount) || 0), 0)
+
+    // "Ayer" es el día calendario anterior en Bogotá, no la hora actual menos
+    // 24 horas: se resta sobre la fecha ya convertida, con aritmética en UTC
+    // para que los cambios de mes y de año salgan bien.
+    const [year, month, day] = todayStr.split("-").map(Number);
+    const previous = new Date(Date.UTC(year, month - 1, day));
+    previous.setUTCDate(previous.getUTCDate() - 1);
+    const yesterdayStr = [
+      previous.getUTCFullYear(),
+      String(previous.getUTCMonth() + 1).padStart(2, "0"),
+      String(previous.getUTCDate()).padStart(2, "0")
+    ].join("-");
+
+    const summary = {
+      today: { count: 0, revenue: 0 },
+      yesterday: { count: 0, revenue: 0 }
     };
+
+    for (const sale of (sales || [])) {
+      const date = new Date(sale.dateTime || sale.timestamp);
+      if (isNaN(date.getTime())) continue;
+      const dateStr = getBogotaDateStr(date);
+      const amount = Number(sale.total ?? sale.totalAmount) || 0;
+
+      if (dateStr === todayStr) {
+        summary.today.count++;
+        summary.today.revenue += amount;
+      } else if (dateStr === yesterdayStr) {
+        summary.yesterday.count++;
+        summary.yesterday.revenue += amount;
+      }
+    }
+
+    return summary;
   }, [sales]);
 
   React.useEffect(() => {
@@ -206,30 +231,46 @@ export default function FacturacionTab() {
               El tamaño no es arbitrario: a 1280px quedan 192px libres por lado,
               así que 160px de ancho más 16px de separación caben justos sin
               provocar desplazamiento horizontal. */}
-          <div className="hidden xl:block absolute top-0 right-full mr-4 w-40">
+          <div className="hidden xl:block absolute top-0 right-full mr-4 w-40 space-y-2.5">
             <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-3 text-center">
               <div className="w-8 h-8 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center mx-auto mb-1.5">
                 <DollarSign className="w-4 h-4 text-teal-600" />
               </div>
               <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-400">Venta del día</span>
               <strong className="block text-base font-black text-teal-700 mt-0.5 leading-tight break-words">
-                ${todaySummary.revenue.toLocaleString("es-CO")}
+                ${daySummary.today.revenue.toLocaleString("es-CO")}
+              </strong>
+            </div>
+
+            {/* Referencia de ayer: deliberadamente más apagada, para que la
+                cifra de hoy siga siendo la que domina la mirada. */}
+            <div className="bg-slate-50 border border-slate-200/70 rounded-xl p-2.5 text-center">
+              <span className="block text-[8.5px] uppercase font-bold tracking-wider text-slate-400">Ayer</span>
+              <strong className="block text-xs font-bold text-slate-500 mt-0.5 leading-tight break-words">
+                ${daySummary.yesterday.revenue.toLocaleString("es-CO")}
               </strong>
             </div>
           </div>
 
-          <div className="hidden xl:block absolute top-0 left-full ml-4 w-40">
+          <div className="hidden xl:block absolute top-0 left-full ml-4 w-40 space-y-2.5">
             <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-3 text-center">
               <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto mb-1.5">
                 <Users className="w-4 h-4 text-slate-600" />
               </div>
               <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-400">Clientes atendidos</span>
               <strong className="block text-base font-black text-slate-900 mt-0.5 leading-tight">
-                {todaySummary.count}
+                {daySummary.today.count}
               </strong>
               <span className="block text-[9.5px] font-semibold text-slate-400 mt-0.5">
-                {todaySummary.count === 1 ? "factura emitida" : "facturas emitidas"}
+                {daySummary.today.count === 1 ? "factura emitida" : "facturas emitidas"}
               </span>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200/70 rounded-xl p-2.5 text-center">
+              <span className="block text-[8.5px] uppercase font-bold tracking-wider text-slate-400">Ayer</span>
+              <strong className="block text-xs font-bold text-slate-500 mt-0.5 leading-tight">
+                {daySummary.yesterday.count} {daySummary.yesterday.count === 1 ? "cliente" : "clientes"}
+              </strong>
             </div>
           </div>
 
