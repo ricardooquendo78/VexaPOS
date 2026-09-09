@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Camera, Package, FileText, TrendingDown, LineChart, User, Settings, Plus, Search, AlertCircle, FileSpreadsheet, Building, CheckCircle, Trash2, Barcode, Printer, X, CreditCard, UserCheck, LogOut, Wifi, WifiOff, RefreshCw, PlusCircle, Info } from 'lucide-react';
+import { getBogotaDateStr } from '../App';
+import { Camera, Package, FileText, TrendingDown, LineChart, User, Users, Settings, Plus, Search, AlertCircle, FileSpreadsheet, Building, CheckCircle, Trash2, Barcode, Printer, X, CreditCard, UserCheck, LogOut, Wifi, WifiOff, RefreshCw, PlusCircle, Info, DollarSign } from 'lucide-react';
 import TechAdvisory from './TechAdvisory';
 import BarcodeScannerModal from './BarcodeScannerModal';
 
@@ -16,6 +17,22 @@ export default function FacturacionTab() {
   const [unifiedQuery, setUnifiedQuery] = React.useState('');
   const [showCameraScanner, setShowCameraScanner] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Resumen del día. Se calcula igual que en Reportes (fecha de Bogotá) para
+  // que ambas pestañas muestren siempre la misma cifra. Incluye las ventas
+  // hechas sin conexión que aún no se han sincronizado.
+  const todaySummary = React.useMemo(() => {
+    const todayStr = getBogotaDateStr();
+    const todaySales = (sales || []).filter((s: any) => {
+      const date = new Date(s.dateTime || s.timestamp);
+      if (isNaN(date.getTime())) return false;
+      return getBogotaDateStr(date) === todayStr;
+    });
+    return {
+      count: todaySales.length,
+      revenue: todaySales.reduce((acc: number, s: any) => acc + (Number(s.total ?? s.totalAmount) || 0), 0)
+    };
+  }, [sales]);
 
   React.useEffect(() => {
     if (activeTab === "facturacion" && searchInputRef.current) {
@@ -182,7 +199,38 @@ export default function FacturacionTab() {
       {/* TAB CONTENT: FACTURACIÓN / POS */}
       {activeTab === "facturacion" && (
         <div className="max-w-4xl mx-auto w-full space-y-6 text-slate-800">
-          
+
+          {/* BURBUJA: RESUMEN DE LA JORNADA */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-stretch bg-white border border-slate-200 rounded-full shadow-xs overflow-hidden">
+              <div className="flex items-center gap-2.5 pl-4 pr-5 py-2">
+                <div className="w-7 h-7 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center flex-shrink-0">
+                  <DollarSign className="w-3.5 h-3.5 text-teal-600" />
+                </div>
+                <div className="leading-tight">
+                  <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-400 whitespace-nowrap">Venta del día</span>
+                  <strong className="block text-sm font-black text-teal-700 whitespace-nowrap">
+                    ${todaySummary.revenue.toLocaleString("es-CO")}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="w-px bg-slate-200 my-2.5 flex-shrink-0" />
+
+              <div className="flex items-center gap-2.5 pl-5 pr-5 py-2">
+                <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0">
+                  <Users className="w-3.5 h-3.5 text-slate-600" />
+                </div>
+                <div className="leading-tight">
+                  <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-400 whitespace-nowrap">Clientes atendidos</span>
+                  <strong className="block text-sm font-black text-slate-900 whitespace-nowrap">
+                    {todaySummary.count} {todaySummary.count === 1 ? "factura" : "facturas"}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* UNIFIED SEARCH AND BARCODE SCANNER */}
           <div className="bg-gradient-to-r from-teal-900 to-slate-900 text-white rounded-xl p-5 md:p-6 shadow-sm space-y-4 relative border border-teal-950">
             <div className="flex items-center gap-2">
