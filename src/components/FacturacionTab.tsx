@@ -198,36 +198,38 @@ export default function FacturacionTab() {
     <>
       {/* TAB CONTENT: FACTURACIÓN / POS */}
       {activeTab === "facturacion" && (
-        <div className="max-w-4xl mx-auto w-full space-y-6 text-slate-800">
+        <div className="max-w-4xl mx-auto w-full space-y-6 text-slate-800 relative">
 
-          {/* BURBUJA: RESUMEN DE LA JORNADA */}
-          <div className="flex justify-center">
-            <div className="inline-flex items-stretch bg-white border border-slate-200 rounded-full shadow-xs overflow-hidden">
-              <div className="flex items-center gap-2.5 pl-4 pr-5 py-2">
-                <div className="w-7 h-7 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center flex-shrink-0">
-                  <DollarSign className="w-3.5 h-3.5 text-teal-600" />
-                </div>
-                <div className="leading-tight">
-                  <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-400 whitespace-nowrap">Venta del día</span>
-                  <strong className="block text-sm font-black text-teal-700 whitespace-nowrap">
-                    ${todaySummary.revenue.toLocaleString("es-CO")}
-                  </strong>
-                </div>
+          {/* BURBUJAS DE LA JORNADA: van en los márgenes laterales, fuera del
+              módulo, para no desplazar ni un pixel del POS. Solo aparecen desde
+              1280px, el único ancho con espacio libre a los lados.
+              El tamaño no es arbitrario: a 1280px quedan 192px libres por lado,
+              así que 160px de ancho más 16px de separación caben justos sin
+              provocar desplazamiento horizontal. */}
+          <div className="hidden xl:block absolute top-0 right-full mr-4 w-40">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-3 text-center">
+              <div className="w-8 h-8 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center mx-auto mb-1.5">
+                <DollarSign className="w-4 h-4 text-teal-600" />
               </div>
+              <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-400">Venta del día</span>
+              <strong className="block text-base font-black text-teal-700 mt-0.5 leading-tight break-words">
+                ${todaySummary.revenue.toLocaleString("es-CO")}
+              </strong>
+            </div>
+          </div>
 
-              <div className="w-px bg-slate-200 my-2.5 flex-shrink-0" />
-
-              <div className="flex items-center gap-2.5 pl-5 pr-5 py-2">
-                <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0">
-                  <Users className="w-3.5 h-3.5 text-slate-600" />
-                </div>
-                <div className="leading-tight">
-                  <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-400 whitespace-nowrap">Clientes atendidos</span>
-                  <strong className="block text-sm font-black text-slate-900 whitespace-nowrap">
-                    {todaySummary.count} {todaySummary.count === 1 ? "factura" : "facturas"}
-                  </strong>
-                </div>
+          <div className="hidden xl:block absolute top-0 left-full ml-4 w-40">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-3 text-center">
+              <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto mb-1.5">
+                <Users className="w-4 h-4 text-slate-600" />
               </div>
+              <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-400">Clientes atendidos</span>
+              <strong className="block text-base font-black text-slate-900 mt-0.5 leading-tight">
+                {todaySummary.count}
+              </strong>
+              <span className="block text-[9.5px] font-semibold text-slate-400 mt-0.5">
+                {todaySummary.count === 1 ? "factura emitida" : "facturas emitidas"}
+              </span>
             </div>
           </div>
 

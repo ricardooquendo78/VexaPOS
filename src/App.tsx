@@ -993,23 +993,23 @@ export default function App() {
 
   // POS / Facturación Helpers
   const handleAddProductToCart = (p: Product) => {
-    const existing = posCart.find(item => item.product.id === p.id);
-    if (existing) {
-      // check if exceeds conversion factor to normalize, else increment skins by default
-      setPosCart(prev => prev.map(item => {
-        if (item.product.id === p.id) {
-          return { ...item, qtySkins: item.qtySkins + 1 };
-        }
-        return item;
-      }));
-    } else {
-      setPosCart([...posCart, {
+    // Lo último que se agrega queda de primero: con el lector de código de
+    // barras el cajero necesita ver de inmediato lo que acaba de pasar, sin
+    // tener que buscar al final de una lista larga.
+    setPosCart(prev => {
+      const existing = prev.find(item => item.product.id === p.id);
+      if (existing) {
+        // Si ya estaba, sube al inicio con la cantidad incrementada.
+        const rest = prev.filter(item => item.product.id !== p.id);
+        return [{ ...existing, qtySkins: existing.qtySkins + 1 }, ...rest];
+      }
+      return [{
         product: p,
         qtySkins: 1,
         qtyUnits: 0,
         customPrice: p.price
-      }]);
-    }
+      }, ...prev];
+    });
     setPosSearchQuery("");
   };
 
