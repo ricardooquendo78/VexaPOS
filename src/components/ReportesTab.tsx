@@ -18,15 +18,27 @@ export default function ReportesTab() {
   const [supplierInvoices, setSupplierInvoices] = React.useState<any[]>([]);
   const [reportsSubTab, setReportsSubTab] = React.useState<"day" | "month" | "year">("day");
 
-  // Fetch supplier invoices history
+  // Fetch supplier invoices history.
+  // Se usa apiFetch para que la petición lleve el token de sesión, y se exige
+  // que la respuesta sea una lista: si el servidor devuelve un error, es un
+  // objeto, y recorrerlo más abajo tumbaría toda la pantalla.
   React.useEffect(() => {
     if (activeTab === "reportes") {
-      fetch("/api/inventory/invoices/history")
+      apiFetch("/api/inventory/invoices/history")
         .then(r => r.json())
-        .then(data => setSupplierInvoices(data))
-        .catch(e => console.error("Error fetching supplier invoices:", e));
+        .then(data => setSupplierInvoices(Array.isArray(data) ? data : []))
+        .catch(e => {
+          console.error("Error fetching supplier invoices:", e);
+          setSupplierInvoices([]);
+        });
     }
   }, [activeTab, sales, closures]);
+
+  // Listas endurecidas: si alguna llega en una forma inesperada desde el
+  // servidor, se trabaja sobre una lista vacía en vez de reventar la pantalla.
+  const safeSales = Array.isArray(sales) ? sales : [];
+  const safeClosures = Array.isArray(closures) ? closures : [];
+  const safeSupplierInvoices = Array.isArray(supplierInvoices) ? supplierInvoices : [];
 
   // Bogota local timezone date helpers
   const getTodayBogotaStr = () => getBogotaDateStr();
@@ -68,11 +80,11 @@ export default function ReportesTab() {
 
   // 1. REPORTE DEL DÍA (TODAY)
   const todayStr = getTodayBogotaStr();
-  const todaySales = sales.filter(s => getSaleBogotaDate(s.dateTime || s.timestamp) === todayStr);
+  const todaySales = safeSales.filter((s: any) => getSaleBogotaDate(s.dateTime || s.timestamp) === todayStr);
   const todaySalesRevenue = todaySales.reduce((acc, s) => acc + (Number(s.total ?? s.totalAmount) || 0), 0);
   const todayCOGS = todaySales.reduce((acc, s) => acc + calculateSaleCost(s), 0);
 
-  const todayClosure = closures.find(c => c.date === todayStr);
+  const todayClosure = safeClosures.find((c: any) => c.date === todayStr);
   const todayExpenses = todayClosure ? (Number(todayClosure.totalExpenses) || 0) : 0;
   const todayExpensesList = todayClosure ? (todayClosure.expenses || []) : [];
   const todayUtility = todaySalesRevenue - todayCOGS - todayExpenses;
@@ -81,7 +93,7 @@ export default function ReportesTab() {
   const currentMonthStr = todayStr.substring(0, 7); // YYYY-MM
   const monthDaysMap: { [date: string]: { sales: number; cogs: number; boxExpenses: number; supplierInvoices: number } } = {};
 
-  sales.forEach(s => {
+  safeSales.forEach((s: any) => {
     const date = getSaleBogotaDate(s.dateTime || s.timestamp);
     if (date.startsWith(currentMonthStr)) {
       if (!monthDaysMap[date]) monthDaysMap[date] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
@@ -90,14 +102,14 @@ export default function ReportesTab() {
     }
   });
 
-  closures.forEach(c => {
+  safeClosures.forEach((c: any) => {
     if (c.date && c.date.startsWith(currentMonthStr)) {
       if (!monthDaysMap[c.date]) monthDaysMap[c.date] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
       monthDaysMap[c.date].boxExpenses += Number(c.totalExpenses) || 0;
     }
   });
 
-  supplierInvoices.forEach(inv => {
+  safeSupplierInvoices.forEach((inv: any) => {
     if (inv.date && inv.date.startsWith(currentMonthStr)) {
       if (!monthDaysMap[inv.date]) monthDaysMap[inv.date] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
       monthDaysMap[inv.date].supplierInvoices += Number(inv.totalCost) || 0;
@@ -120,7 +132,7 @@ export default function ReportesTab() {
   const currentYearStr = todayStr.substring(0, 4); // YYYY
   const yearMonthsMap: { [month: string]: { sales: number; cogs: number; boxExpenses: number; supplierInvoices: number } } = {};
 
-  sales.forEach(s => {
+  safeSales.forEach((s: any) => {
     const date = getSaleBogotaDate(s.dateTime || s.timestamp);
     if (date.startsWith(currentYearStr)) {
       const month = date.substring(0, 7);
@@ -130,7 +142,7 @@ export default function ReportesTab() {
     }
   });
 
-  closures.forEach(c => {
+  safeClosures.forEach((c: any) => {
     if (c.date && c.date.startsWith(currentYearStr)) {
       const month = c.date.substring(0, 7);
       if (!yearMonthsMap[month]) yearMonthsMap[month] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
@@ -138,7 +150,7 @@ export default function ReportesTab() {
     }
   });
 
-  supplierInvoices.forEach(inv => {
+  safeSupplierInvoices.forEach((inv: any) => {
     if (inv.date && inv.date.startsWith(currentYearStr)) {
       const month = inv.date.substring(0, 7);
       if (!yearMonthsMap[month]) yearMonthsMap[month] = { sales: 0, cogs: 0, boxExpenses: 0, supplierInvoices: 0 };
